@@ -5,7 +5,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install && npm --prefix backend run build && mkdir -p backend/public && cp -r frontend/dist/. backend/public/",
+    "build": "npm --prefix frontend install --include=dev && npm --prefix frontend run build && npm --prefix backend install --include=dev && npm --prefix backend run build && mkdir -p backend/public && cp -r frontend/dist/. backend/public/",
     "start": "node backend/dist/index.js"
   }
 }
