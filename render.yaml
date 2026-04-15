@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: commanddesk
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: commanddesk-db
+          property: connectionString
+
+databases:
+  - name: commanddesk-db
+    databaseName: commanddesk
+    user: commanddesk
+    plan: free
