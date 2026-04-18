@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import Modal from '../common/Modal'
 import { tasksApi } from '../../api/tasks'
+import { employeesApi } from '../../api/employees'
 import { Project } from '../../types'
 
 const PRIORITIES = ['Critical', 'High', 'Medium', 'Low']
@@ -27,9 +29,12 @@ export default function AddTaskModal({ onClose, onCreated, defaultCategory = 'pr
     assigned_from: '',
     report_to: '',
     due_date: '',
+    assignee: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: employeesApi.getAll })
 
   const setF = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }))
 
@@ -49,6 +54,7 @@ export default function AddTaskModal({ onClose, onCreated, defaultCategory = 'pr
         status: form.status as any,
         category: form.category as any,
         project_id: form.project_id ? Number(form.project_id) : undefined,
+        assignee: form.assignee,
       })
       onCreated()
     } catch {
@@ -97,6 +103,14 @@ export default function AddTaskModal({ onClose, onCreated, defaultCategory = 'pr
             <label style={labelStyle}>Due Date</label>
             <input type="date" style={{ ...inputStyle, colorScheme: 'dark' }} value={form.due_date} onChange={e => setF('due_date', e.target.value)} />
           </div>
+        </div>
+        <div>
+          <label style={labelStyle}>Assignee</label>
+          <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.assignee} onChange={e => setF('assignee', e.target.value)}>
+            <option value="">Unassigned</option>
+            <option value="Me">Me</option>
+            {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+          </select>
         </div>
         {form.category === 'proj' && projects.length > 0 && (
           <div>

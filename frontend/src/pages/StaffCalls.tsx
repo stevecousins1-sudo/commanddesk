@@ -7,6 +7,26 @@ import Modal from '../components/common/Modal'
 function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => void }) {
   const qc = useQueryClient()
   const [newItem, setNewItem] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ name: call.name, schedule: call.schedule || '', next_date: call.next_date || '' })
+  const [saving, setSaving] = useState(false)
+
+  const saveEdit = async () => {
+    setSaving(true)
+    try {
+      await staffCallsApi.update(call.id, editForm)
+      qc.invalidateQueries({ queryKey: ['staff-calls'] })
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const editInputStyle = {
+    padding: '6px 10px', borderRadius: 6, fontSize: 13, background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)', color: 'var(--text-1)', fontFamily: 'DM Sans, sans-serif',
+    outline: 'none', width: '100%',
+  }
 
   const handleDelete = async () => {
     if (!confirm(`Delete "${call.name}"? This cannot be undone.`)) return
@@ -34,12 +54,16 @@ function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => vo
     <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h3 className="font-syne font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{call.name}</h3>
-          {call.schedule && <p className="text-xs mt-0.5" style={{ color: 'var(--text-2)' }}>{call.schedule}</p>}
-          {call.next_date && (
-            <p className="font-mono text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-              Next: {new Date(call.next_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </p>
+          {!editing && (
+            <>
+              <h3 className="font-syne font-semibold text-sm" style={{ color: 'var(--text-1)' }}>{call.name}</h3>
+              {call.schedule && <p className="text-xs mt-0.5" style={{ color: 'var(--text-2)' }}>{call.schedule}</p>}
+              {call.next_date && (
+                <p className="font-mono text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                  Next: {new Date(call.next_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              )}
+            </>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -49,6 +73,13 @@ function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => vo
             </span>
           )}
           <button
+            onClick={() => setEditing(e => !e)}
+            title="Edit staff call"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: editing ? 'var(--blue)' : 'var(--text-3)', fontSize: 14, padding: '2px 4px', borderRadius: 4 }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--blue)')}
+            onMouseLeave={e => (e.currentTarget.style.color = editing ? 'var(--blue)' : 'var(--text-3)')}
+          >✎</button>
+          <button
             onClick={handleDelete}
             title="Delete staff call"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 14, padding: '2px 4px', borderRadius: 4 }}
@@ -57,6 +88,40 @@ function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => vo
           >✕</button>
         </div>
       </div>
+
+      {editing && (
+        <div className="mb-3 p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+          <div className="space-y-2 mb-3">
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 3, fontFamily: 'DM Mono, monospace' }}>Name</label>
+              <input style={editInputStyle} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Call name" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 3, fontFamily: 'DM Mono, monospace' }}>Schedule</label>
+              <input style={editInputStyle} value={editForm.schedule} onChange={e => setEditForm(f => ({ ...f, schedule: e.target.value }))} placeholder="e.g. Weekly, Every Monday" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 3, fontFamily: 'DM Mono, monospace' }}>Next Date</label>
+              <input type="date" style={{ ...editInputStyle, colorScheme: 'dark' }} value={editForm.next_date} onChange={e => setEditForm(f => ({ ...f, next_date: e.target.value }))} />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={saveEdit}
+              disabled={saving}
+              style={{ padding: '6px 14px', borderRadius: 6, background: 'var(--blue)', color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 12, opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              style={{ padding: '6px 14px', borderRadius: 6, background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 12 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-3">
         <input

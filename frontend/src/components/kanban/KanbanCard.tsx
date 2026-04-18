@@ -14,9 +14,10 @@ interface Props {
   task: Task
   isDragging?: boolean
   onDelete?: () => void
+  onEdit?: () => void
 }
 
-export default function KanbanCard({ task, isDragging, onDelete }: Props) {
+export default function KanbanCard({ task, isDragging, onDelete, onEdit }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging: dragging } = useDraggable({
     id: task.id,
   })
@@ -49,6 +50,16 @@ export default function KanbanCard({ task, isDragging, onDelete }: Props) {
         </span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="w-2 h-2 rounded-full" style={{ background: PRIORITY_DOT[task.priority] || 'var(--blue)' }} />
+          {onEdit && (
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onEdit() }}
+              title="Edit task"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 11, lineHeight: 1, padding: '1px 3px', borderRadius: 3 }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--blue-bright)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+            >✎</button>
+          )}
           {onDelete && (
             <button
               onPointerDown={e => e.stopPropagation()}
@@ -77,6 +88,14 @@ export default function KanbanCard({ task, isDragging, onDelete }: Props) {
             style={{ color: isOverdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}
           >
             {isOverdue ? '⚠ ' : ''}{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        )}
+        {task.assignee && (
+          <span
+            className="font-mono text-xs px-1.5 py-0.5 rounded"
+            style={{ background: 'rgba(74,144,217,0.12)', color: 'var(--text-2)', border: '1px solid rgba(74,144,217,0.2)', fontSize: 10 }}
+          >
+            {task.assignee}
           </span>
         )}
       </div>

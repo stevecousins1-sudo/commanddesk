@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../store/useAppStore'
 import { projectsApi } from '../api/projects'
@@ -13,12 +13,39 @@ export default function ProjectDetail() {
   const [showAddTask, setShowAddTask] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [addingNote, setAddingNote] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', client: '', description: '', due_date: '', priority: 'Medium', color: '#60a5fa' })
+  const [saving, setSaving] = useState(false)
 
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsApi.getAll })
   const { data: allTasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => tasksApi.getAll() })
 
   const project = projects.find(p => p.id === selectedProjectId)
   const tasks = allTasks.filter(t => t.project_id === selectedProjectId)
+
+  const startEdit = () => {
+    setEditForm({
+      name: project!.name,
+      client: project!.client || '',
+      description: project!.description || '',
+      due_date: project!.due_date || '',
+      priority: project!.priority,
+      color: project!.color,
+    })
+    setEditing(true)
+  }
+
+  const saveEdit = async () => {
+    if (!editForm.name.trim() || !project) return
+    setSaving(true)
+    try {
+      await projectsApi.update(project.id, { ...editForm, priority: editForm.priority as any })
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const handleDelete = async () => {
     if (!project || !confirm(`Delete project "${project.name}"? This cannot be undone.`)) return
@@ -51,48 +78,140 @@ export default function ProjectDetail() {
   const statuses = ['todo', 'inprogress', 'review', 'done'] as const
   const statusLabels = { todo: 'To Do', inprogress: 'In Progress', review: 'Review', done: 'Done' }
 
+  const editInputStyle: React.CSSProperties = {
+    padding: '7px 10px', borderRadius: 8, fontSize: 13,
+    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+    color: 'var(--text-1)', fontFamily: 'DM Sans, sans-serif', outline: 'none', width: '100%',
+  }
+
   return (
     <div className="flex flex-col h-full min-h-0 gap-5">
       {/* Header */}
       <div className="flex-shrink-0">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex-shrink-0" style={{ background: project.color + '33', border: `2px solid ${project.color}` }}>
-              <div className="w-full h-full rounded-xl" style={{ background: project.color, opacity: 0.7 }} />
+        {editing ? (
+          <div className="rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            {/* Row: Name + Color */}
+            <div className="flex gap-2 mb-3">
+              <input
+                style={{ ...editInputStyle, flex: 1 }}
+                value={editForm.name}
+                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="Project name"
+              />
+              <input
+                type="color"
+                value={editForm.color}
+                onChange={e => setEditForm(f => ({ ...f, color: e.target.value }))}
+                style={{ width: 38, height: 36, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-elevated)', cursor: 'pointer', padding: 2, flexShrink: 0 }}
+                title="Project color"
+              />
             </div>
-            <div>
-              <h1 className="font-syne font-bold text-2xl" style={{ color: 'var(--text-1)' }}>{project.name}</h1>
-              {project.client && <p className="text-sm" style={{ color: 'var(--text-2)' }}>{project.client}</p>}
+            {/* Row: Client + Priority */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+              <input
+                style={editInputStyle}
+                value={editForm.client}
+                onChange={e => setEditForm(f => ({ ...f, client: e.target.value }))}
+                placeholder="Client (optional)"
+              />
+              <select
+                style={editInputStyle}
+                value={editForm.priority}
+                onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))}
+              >
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+            </div>
+            {/* Due Date */}
+            <div className="mb-3">
+              <input
+                type="date"
+                style={editInputStyle}
+                value={editForm.due_date}
+                onChange={e => setEditForm(f => ({ ...f, due_date: e.target.value }))}
+              />
+            </div>
+            {/* Description */}
+            <div className="mb-4">
+              <textarea
+                style={{ ...editInputStyle, resize: 'vertical', minHeight: 72 }}
+                value={editForm.description}
+                onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Description (optional)"
+                rows={3}
+              />
+            </div>
+            {/* Buttons */}
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setEditing(false)}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                style={{ background: 'var(--bg-card)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={saving || !editForm.name.trim()}
+                className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                style={{ background: 'var(--blue)', color: '#fff', opacity: saving || !editForm.name.trim() ? 0.5 : 1 }}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <PriorityBadge priority={project.priority as any} size="md" />
-            {project.due_date && (
-              <span className="font-mono text-xs px-2 py-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
-                Due {new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
+        ) : (
+          <>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl flex-shrink-0" style={{ background: project.color + '33', border: `2px solid ${project.color}` }}>
+                  <div className="w-full h-full rounded-xl" style={{ background: project.color, opacity: 0.7 }} />
+                </div>
+                <div>
+                  <h1 className="font-syne font-bold text-2xl" style={{ color: 'var(--text-1)' }}>{project.name}</h1>
+                  {project.client && <p className="text-sm" style={{ color: 'var(--text-2)' }}>{project.client}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <PriorityBadge priority={project.priority as any} size="md" />
+                {project.due_date && (
+                  <span className="font-mono text-xs px-2 py-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
+                    Due {new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                )}
+                <button
+                  onClick={startEdit}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                  style={{ background: 'var(--bg-card)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setShowAddTask(true)}
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                  style={{ background: 'var(--blue)', color: '#fff' }}
+                >
+                  + Task
+                </button>
+                <button
+                  onClick={handleDelete}
+                  title="Delete project"
+                  className="px-3 py-1.5 rounded-lg text-sm font-medium"
+                  style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--red)', border: '1px solid rgba(248,113,113,0.3)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.1)')}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+            {project.description && (
+              <p className="mt-3 text-sm" style={{ color: 'var(--text-2)', maxWidth: 700 }}>{project.description}</p>
             )}
-            <button
-              onClick={() => setShowAddTask(true)}
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'var(--blue)', color: '#fff' }}
-            >
-              + Task
-            </button>
-            <button
-              onClick={handleDelete}
-              title="Delete project"
-              className="px-3 py-1.5 rounded-lg text-sm font-medium"
-              style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--red)', border: '1px solid rgba(248,113,113,0.3)' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.2)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.1)')}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-        {project.description && (
-          <p className="mt-3 text-sm" style={{ color: 'var(--text-2)', maxWidth: 700 }}>{project.description}</p>
+          </>
         )}
         {/* Task counts */}
         <div className="flex gap-4 mt-3">

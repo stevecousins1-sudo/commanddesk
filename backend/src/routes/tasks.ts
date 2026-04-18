@@ -34,12 +34,12 @@ tasksRouter.get('/', async (req: Request, res: Response) => {
 })
 
 tasksRouter.post('/', async (req: Request, res: Response) => {
-  const { title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date } = req.body
+  const { title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date, assignee } = req.body
   try {
     const result = await pool.query(
-      `INSERT INTO tasks (title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [title, description, priority || 'Medium', status || 'todo', category || 'proj', project_id || null, project_name, assigned_from, report_to, due_date]
+      `INSERT INTO tasks (title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date, assignee)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [title, description, priority || 'Medium', status || 'todo', category || 'proj', project_id || null, project_name, assigned_from, report_to, due_date, assignee]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -49,13 +49,13 @@ tasksRouter.post('/', async (req: Request, res: Response) => {
 
 tasksRouter.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params
-  const { title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date } = req.body
+  const { title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date, assignee } = req.body
   try {
     const result = await pool.query(
       `UPDATE tasks SET title=$1, description=$2, priority=$3, status=$4, category=$5,
-       project_id=$6, project_name=$7, assigned_from=$8, report_to=$9, due_date=$10
-       WHERE id=$11 RETURNING *`,
-      [title, description, priority, status, category, project_id || null, project_name, assigned_from, report_to, due_date, id]
+       project_id=$6, project_name=$7, assigned_from=$8, report_to=$9, due_date=$10, assignee=$11
+       WHERE id=$12 RETURNING *`,
+      [title, description, priority, status, category, project_id || null, project_name, assigned_from, report_to, due_date, assignee, id]
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' })
     res.json(result.rows[0])

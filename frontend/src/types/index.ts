@@ -22,6 +22,7 @@ export interface Task {
   project_name?: string
   assigned_from?: string
   report_to?: string
+  assignee?: string
   due_date?: string
   completed_at?: string
   notes: Note[]

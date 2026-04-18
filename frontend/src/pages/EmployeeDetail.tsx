@@ -12,6 +12,9 @@ export default function EmployeeDetail() {
   const [meetingSummary, setMeetingSummary] = useState('')
   const [savingMeeting, setSavingMeeting] = useState(false)
   const [showMeetingForm, setShowMeetingForm] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ name: '', role: '', initials: '', color: '#60a5fa' })
+  const [saving, setSaving] = useState(false)
 
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: employeesApi.getAll })
   const employee = employees.find(e => e.id === selectedEmployeeId)
@@ -54,6 +57,23 @@ export default function EmployeeDetail() {
     qc.invalidateQueries({ queryKey: ['employees'] })
   }
 
+  const startEdit = () => {
+    setEditForm({ name: employee.name, role: employee.role, initials: employee.initials, color: employee.color })
+    setEditing(true)
+  }
+
+  const saveEdit = async () => {
+    if (!editForm.name.trim() || !employee) return
+    setSaving(true)
+    try {
+      await employeesApi.update(employee.id, editForm)
+      qc.invalidateQueries({ queryKey: ['employees'] })
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleDelete = async () => {
     if (!employee || !confirm(`Remove "${employee.name}" from the team? This cannot be undone.`)) return
     await employeesApi.delete(employee.id)
@@ -79,6 +99,11 @@ export default function EmployeeDetail() {
   }
 
   const cardStyle = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12 }
+  const editInputStyle = {
+    padding: '7px 10px', borderRadius: 8, fontSize: 13, background: 'var(--bg-elevated)',
+    border: '1px solid var(--border)', color: 'var(--text-1)', fontFamily: 'DM Sans, sans-serif',
+    outline: 'none', width: '100%',
+  }
   const inputStyle = {
     background: 'var(--bg-elevated)', border: '1px solid var(--border)',
     color: 'var(--text-1)', fontFamily: 'DM Sans, sans-serif',
@@ -104,17 +129,68 @@ export default function EmployeeDetail() {
             </p>
           )}
         </div>
-        <button
-          onClick={handleDelete}
-          title="Remove team member"
-          className="ml-auto px-3 py-1.5 rounded-lg text-sm font-medium flex-shrink-0"
-          style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--red)', border: '1px solid rgba(248,113,113,0.3)' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.2)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.1)')}
-        >
-          Remove
-        </button>
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+          {!editing && (
+            <button
+              onClick={startEdit}
+              className="px-3 py-1.5 rounded-lg text-sm font-medium"
+              style={{ background: 'rgba(96,165,250,0.1)', color: 'var(--blue)', border: '1px solid rgba(96,165,250,0.3)' }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(96,165,250,0.2)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(96,165,250,0.1)')}
+            >
+              Edit
+            </button>
+          )}
+          <button
+            onClick={handleDelete}
+            title="Remove team member"
+            className="px-3 py-1.5 rounded-lg text-sm font-medium"
+            style={{ background: 'rgba(248,113,113,0.1)', color: 'var(--red)', border: '1px solid rgba(248,113,113,0.3)' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.2)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(248,113,113,0.1)')}
+          >
+            Remove
+          </button>
+        </div>
       </div>
+
+      {editing && (
+        <div className="p-4 rounded-xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 4, fontFamily: 'DM Mono, monospace' }}>Name</label>
+              <input style={editInputStyle} value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} placeholder="Name" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 4, fontFamily: 'DM Mono, monospace' }}>Role</label>
+              <input style={editInputStyle} value={editForm.role} onChange={e => setEditForm(f => ({ ...f, role: e.target.value }))} placeholder="Role" />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 4, fontFamily: 'DM Mono, monospace' }}>Initials</label>
+              <input style={editInputStyle} value={editForm.initials} onChange={e => setEditForm(f => ({ ...f, initials: e.target.value }))} placeholder="Initials" maxLength={4} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: 'var(--text-3)', display: 'block', marginBottom: 4, fontFamily: 'DM Mono, monospace' }}>Color</label>
+              <input type="color" style={{ ...editInputStyle, padding: '3px 6px', height: 34, cursor: 'pointer' }} value={editForm.color} onChange={e => setEditForm(f => ({ ...f, color: e.target.value }))} />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={saveEdit}
+              disabled={saving || !editForm.name.trim()}
+              style={{ padding: '7px 16px', borderRadius: 8, background: 'var(--blue)', color: '#fff', border: 'none', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 13, opacity: saving || !editForm.name.trim() ? 0.6 : 1 }}
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              style={{ padding: '7px 16px', borderRadius: 8, background: 'transparent', color: 'var(--text-2)', border: '1px solid var(--border)', cursor: 'pointer', fontSize: 13 }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Agenda Items */}

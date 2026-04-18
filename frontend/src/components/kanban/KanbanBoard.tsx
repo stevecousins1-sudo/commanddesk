@@ -14,6 +14,7 @@ import { Task, TaskStatus } from '../../types'
 import { tasksApi } from '../../api/tasks'
 import KanbanColumn from './KanbanColumn'
 import KanbanCard from './KanbanCard'
+import EditTaskModal from '../modals/EditTaskModal'
 
 const COLUMNS: { id: TaskStatus; label: string }[] = [
   { id: 'todo', label: 'To Do' },
@@ -31,6 +32,7 @@ interface Props {
 
 export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDeleted }: Props) {
   const [activeId, setActiveId] = useState<number | null>(null)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
   const qc = useQueryClient()
 
   const handleDeleteTask = async (taskId: number) => {
@@ -71,27 +73,41 @@ export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDel
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex gap-4 h-full min-h-0" style={{ overflowX: 'auto', paddingBottom: 8 }}>
-        {COLUMNS.map(col => (
-          <KanbanColumn
-            key={col.id}
-            id={col.id}
-            label={col.label}
-            tasks={tasks.filter(t => t.status === col.id)}
-            onAddTask={onAddTask ? () => onAddTask(col.id) : undefined}
-            onDeleteTask={handleDeleteTask}
-          />
-        ))}
-      </div>
-      <DragOverlay>
-        {activeTask ? <KanbanCard task={activeTask} isDragging /> : null}
-      </DragOverlay>
-    </DndContext>
+    <>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="flex gap-4 h-full min-h-0" style={{ overflowX: 'auto', paddingBottom: 8 }}>
+          {COLUMNS.map(col => (
+            <KanbanColumn
+              key={col.id}
+              id={col.id}
+              label={col.label}
+              tasks={tasks.filter(t => t.status === col.id)}
+              onAddTask={onAddTask ? () => onAddTask(col.id) : undefined}
+              onDeleteTask={handleDeleteTask}
+              onEditTask={(id) => setEditingTask(tasks.find(t => t.id === id) ?? null)}
+            />
+          ))}
+        </div>
+        <DragOverlay>
+          {activeTask ? <KanbanCard task={activeTask} isDragging /> : null}
+        </DragOverlay>
+      </DndContext>
+      {editingTask && (
+        <EditTaskModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ['tasks'] })
+            onTaskUpdated?.()
+            setEditingTask(null)
+          }}
+        />
+      )}
+    </>
   )
 }
