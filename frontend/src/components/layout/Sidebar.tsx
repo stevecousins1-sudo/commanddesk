@@ -92,7 +92,7 @@ const NavItem = ({
 )
 
 export default function Sidebar() {
-  const { view, selectedProjectId, selectedEmployeeId, setView, setSearchOpen, navigateToProject, navigateToEmployee } = useAppStore()
+  const { view, selectedProjectId, selectedEmployeeId, setView, setSearchOpen, navigateToProject, navigateToEmployee, theme, toggleTheme } = useAppStore()
   const qc = useQueryClient()
 
   const [projectsOpen, setProjectsOpen] = useState(true)
@@ -155,7 +155,7 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 pb-4 space-y-1 min-h-0">
+        <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-1 min-h-0">
           {/* Overview */}
           <div className="mb-2">
             <p className="px-3 py-1.5 text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Overview</p>
@@ -245,6 +245,20 @@ export default function Sidebar() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Theme toggle */}
+        <div className="px-3 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors"
+            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-2)' }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-light)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+          >
+            <span style={{ fontSize: 15 }}>{theme === 'dark' ? '☀' : '☽'}</span>
+            <span style={{ fontFamily: 'DM Sans, sans-serif' }}>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+          </button>
         </div>
       </aside>
 

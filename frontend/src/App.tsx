@@ -12,7 +12,11 @@ import EmployeeDetail from './pages/EmployeeDetail'
 import StaffCalls from './pages/StaffCalls'
 
 export default function App() {
-  const { view, searchOpen, setSearchOpen } = useAppStore()
+  const { view, searchOpen, setSearchOpen, theme } = useAppStore()
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

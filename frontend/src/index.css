@@ -20,6 +20,24 @@
   --text-3: #3d5478;
 }
 
+[data-theme="light"] {
+  --bg-base: #f0f4f8;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f8fafc;
+  --bg-card: #ffffff;
+  --border: #e1e8f0;
+  --border-light: #c8d6e5;
+  --blue: #3b82f6;
+  --blue-bright: #2563eb;
+  --amber: #d97706;
+  --green: #059669;
+  --red: #dc2626;
+  --cyan: #0891b2;
+  --text-1: #0f172a;
+  --text-2: #475569;
+  --text-3: #94a3b8;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -46,6 +64,14 @@ html, body, #root {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-3);
+}
+
+input[type="date"], input[type="color"] {
+  color-scheme: dark;
+}
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="color"] {
+  color-scheme: light;
 }
 
 .font-syne { font-family: 'Syne', sans-serif; }
