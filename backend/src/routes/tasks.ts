@@ -108,6 +108,25 @@ tasksRouter.post('/:id/notes', async (req: Request, res: Response) => {
   }
 })
 
+tasksRouter.post('/:id/status-updates', async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { text } = req.body
+  if (!text?.trim()) return res.status(400).json({ error: 'Text is required' })
+  try {
+    const task = await pool.query('SELECT status_updates FROM tasks WHERE id=$1', [id])
+    if (task.rows.length === 0) return res.status(404).json({ error: 'Not found' })
+    const updates = task.rows[0].status_updates || []
+    updates.unshift({ text: text.trim(), timestamp: new Date().toISOString() })
+    const result = await pool.query(
+      'UPDATE tasks SET status_updates=$1 WHERE id=$2 RETURNING *',
+      [JSON.stringify(updates), id]
+    )
+    res.json(result.rows[0])
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add status update' })
+  }
+})
+
 tasksRouter.delete('/:id', async (req: Request, res: Response) => {
   const { id } = req.params
   try {

@@ -3,11 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { tasksApi } from '../api/tasks'
 import PriorityBadge from '../components/common/PriorityBadge'
 import EditTaskModal from '../components/modals/EditTaskModal'
+import TaskDetailModal from '../components/modals/TaskDetailModal'
 import { Task } from '../types'
 
 export default function DueThisWeek() {
   const qc = useQueryClient()
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
   const { data: tasks = [], isLoading } = useQuery({ queryKey: ['tasks'], queryFn: () => tasksApi.getAll() })
 
   const now = new Date()
@@ -31,8 +33,9 @@ export default function DueThisWeek() {
 
   const TaskRow = ({ task, isOv, onEdit }: { task: Task; isOv?: boolean; onEdit: () => void }) => (
     <div
-      className="flex items-center gap-3 px-4 py-3 rounded-lg"
+      className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer"
       style={{ background: 'var(--bg-card)', border: `1px solid ${isOv ? 'rgba(248,113,113,0.2)' : 'var(--border)'}` }}
+      onClick={() => setDetailTask(task)}
     >
       <button
         onClick={() => handleComplete(task)}
@@ -107,6 +110,13 @@ export default function DueThisWeek() {
           task={editingTask}
           onClose={() => setEditingTask(null)}
           onSaved={() => { qc.invalidateQueries({ queryKey: ['tasks'] }); setEditingTask(null) }}
+        />
+      )}
+      {detailTask && (
+        <TaskDetailModal
+          task={detailTask}
+          onClose={() => setDetailTask(null)}
+          onUpdated={() => qc.invalidateQueries({ queryKey: ['tasks'] })}
         />
       )}
     </div>

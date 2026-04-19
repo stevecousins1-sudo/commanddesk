@@ -15,6 +15,7 @@ import { tasksApi } from '../../api/tasks'
 import KanbanColumn from './KanbanColumn'
 import KanbanCard from './KanbanCard'
 import EditTaskModal from '../modals/EditTaskModal'
+import TaskDetailModal from '../modals/TaskDetailModal'
 
 const COLUMNS: { id: TaskStatus; label: string }[] = [
   { id: 'todo', label: 'To Do' },
@@ -33,6 +34,7 @@ interface Props {
 export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDeleted }: Props) {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [detailTask, setDetailTask] = useState<Task | null>(null)
   const qc = useQueryClient()
 
   const handleDeleteTask = async (taskId: number) => {
@@ -90,6 +92,7 @@ export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDel
               onAddTask={onAddTask ? () => onAddTask(col.id) : undefined}
               onDeleteTask={handleDeleteTask}
               onEditTask={(id) => setEditingTask(tasks.find(t => t.id === id) ?? null)}
+              onCardClick={(id) => setDetailTask(tasks.find(t => t.id === id) ?? null)}
             />
           ))}
         </div>
@@ -97,6 +100,18 @@ export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDel
           {activeTask ? <KanbanCard task={activeTask} isDragging /> : null}
         </DragOverlay>
       </DndContext>
+      {detailTask && (
+        <TaskDetailModal
+          task={detailTask}
+          onClose={() => setDetailTask(null)}
+          onUpdated={() => {
+            qc.invalidateQueries({ queryKey: ['tasks'] })
+            // keep modal open but refresh task data
+            const refreshed = tasks.find(t => t.id === detailTask.id)
+            if (refreshed) setDetailTask(refreshed)
+          }}
+        />
+      )}
       {editingTask && (
         <EditTaskModal
           task={editingTask}

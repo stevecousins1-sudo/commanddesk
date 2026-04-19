@@ -16,9 +16,10 @@ interface Props {
   onAddTask?: () => void
   onDeleteTask?: (id: number) => void
   onEditTask?: (id: number) => void
+  onCardClick?: (id: number) => void
 }
 
-export default function KanbanColumn({ id, label, tasks, onAddTask, onDeleteTask, onEditTask }: Props) {
+export default function KanbanColumn({ id, label, tasks, onAddTask, onDeleteTask, onEditTask, onCardClick }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id })
 
   return (
@@ -60,7 +61,7 @@ export default function KanbanColumn({ id, label, tasks, onAddTask, onDeleteTask
       {/* Cards */}
       <div ref={setNodeRef} className="flex-1 p-3 space-y-2 overflow-y-auto" style={{ minHeight: 80 }}>
         {tasks.map(task => (
-          <KanbanCard key={task.id} task={task} onDelete={onDeleteTask ? () => onDeleteTask(task.id) : undefined} onEdit={onEditTask ? () => onEditTask(task.id) : undefined} />
+          <KanbanCard key={task.id} task={task} onDelete={onDeleteTask ? () => onDeleteTask(task.id) : undefined} onEdit={onEditTask ? () => onEditTask(task.id) : undefined} onCardClick={onCardClick ? () => onCardClick(task.id) : undefined} />
         ))}
         {tasks.length === 0 && (
           <div

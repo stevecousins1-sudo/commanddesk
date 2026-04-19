@@ -11,6 +11,11 @@ export interface Project {
   created_at: string
 }
 
+export interface StatusUpdate {
+  text: string
+  timestamp: string
+}
+
 export interface Task {
   id: number
   title: string
@@ -26,6 +31,7 @@ export interface Task {
   due_date?: string
   completed_at?: string
   notes: Note[]
+  status_updates: StatusUpdate[]
   created_at: string
 }
 

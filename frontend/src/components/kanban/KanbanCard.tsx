@@ -15,9 +15,10 @@ interface Props {
   isDragging?: boolean
   onDelete?: () => void
   onEdit?: () => void
+  onCardClick?: () => void
 }
 
-export default function KanbanCard({ task, isDragging, onDelete, onEdit }: Props) {
+export default function KanbanCard({ task, isDragging, onDelete, onEdit, onCardClick }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging: dragging } = useDraggable({
     id: task.id,
   })
@@ -43,6 +44,7 @@ export default function KanbanCard({ task, isDragging, onDelete, onEdit }: Props
       }}
       {...attributes}
       {...listeners}
+      onClick={onCardClick}
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <span className="text-sm leading-snug" style={{ color: 'var(--text-1)', fontWeight: 500 }}>
@@ -99,6 +101,13 @@ export default function KanbanCard({ task, isDragging, onDelete, onEdit }: Props
           </span>
         )}
       </div>
+      {task.status_updates?.length > 0 && (
+        <div className="mt-2 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+          <p className="text-xs truncate" style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>
+            ↳ {task.status_updates[0].text}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

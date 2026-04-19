@@ -14,4 +14,5 @@ export const tasksApi = {
   addNote: (id: number, text: string, by?: string) =>
     api.post<Task>(`/tasks/${id}/notes`, { text, by }),
   delete: (id: number) => api.delete<void>(`/tasks/${id}`),
+  addStatusUpdate: (id: number, text: string) => api.post<Task>(`/tasks/${id}/status-updates`, { text }),
 }
