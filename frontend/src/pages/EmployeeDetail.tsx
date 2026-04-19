@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../store/useAppStore'
 import { employeesApi } from '../api/employees'
+import { tasksApi } from '../api/tasks'
 import { AgendaItem } from '../types'
+import PriorityBadge from '../components/common/PriorityBadge'
 
 export default function EmployeeDetail() {
   const { selectedEmployeeId, setView } = useAppStore()
@@ -17,6 +19,7 @@ export default function EmployeeDetail() {
   const [saving, setSaving] = useState(false)
 
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: employeesApi.getAll })
+  const { data: allTasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => tasksApi.getAll() })
   const employee = employees.find(e => e.id === selectedEmployeeId)
 
   if (!employee) {
@@ -316,6 +319,62 @@ export default function EmployeeDetail() {
           </div>
         </div>
       </div>
+
+      {/* Assigned Tasks */}
+      {(() => {
+        const assignedTasks = allTasks.filter(t => t.assignee === employee.name && t.status !== 'done')
+        const STATUS_LABEL: Record<string, string> = { todo: 'To Do', inprogress: 'In Progress', review: 'Review' }
+        const STATUS_COLOR: Record<string, string> = { todo: 'var(--text-3)', inprogress: 'var(--blue)', review: 'var(--amber)' }
+        return (
+          <div style={cardStyle} className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-syne font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Assigned Tasks</h2>
+              {assignedTasks.length > 0 && (
+                <span className="font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(74,144,217,0.12)', color: 'var(--blue)', border: '1px solid rgba(74,144,217,0.25)', fontSize: 10 }}>
+                  {assignedTasks.length} open
+                </span>
+              )}
+            </div>
+            {assignedTasks.length === 0 ? (
+              <p className="text-sm" style={{ color: 'var(--text-3)' }}>No open tasks assigned to {employee.name}</p>
+            ) : (
+              <div className="space-y-2">
+                {assignedTasks.map(task => {
+                  const isOverdue = task.due_date && new Date(task.due_date) < new Date()
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>{task.title}</p>
+                        {task.project_name && (
+                          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{task.project_name}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <PriorityBadge priority={task.priority as any} />
+                        <span
+                          className="font-mono text-xs px-1.5 py-0.5 rounded"
+                          style={{ fontSize: 10, color: STATUS_COLOR[task.status] || 'var(--text-3)', background: 'transparent', border: `1px solid ${STATUS_COLOR[task.status] || 'var(--border)'}` }}
+                        >
+                          {STATUS_LABEL[task.status] || task.status}
+                        </span>
+                        {task.due_date && (
+                          <span className="font-mono text-xs" style={{ color: isOverdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}>
+                            {isOverdue ? '⚠ ' : ''}{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }
