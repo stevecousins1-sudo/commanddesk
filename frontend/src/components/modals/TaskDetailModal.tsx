@@ -57,6 +57,7 @@ export default function TaskDetailModal({ task, onClose, onUpdated }: Props) {
       await tasksApi.addStatusUpdate(task.id, updateText.trim())
       setUpdateText('')
       onUpdated()
+      onClose()
     } finally {
       setPosting(false)
     }
