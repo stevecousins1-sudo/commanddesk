@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppStore } from './store/useAppStore'
 import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
@@ -10,9 +10,13 @@ import ProjectDetail from './pages/ProjectDetail'
 import AdHocTasks from './pages/AdHocTasks'
 import EmployeeDetail from './pages/EmployeeDetail'
 import StaffCalls from './pages/StaffCalls'
+import PinAuth from './components/PinAuth'
 
 export default function App() {
   const { view, searchOpen, setSearchOpen, theme } = useAppStore()
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    sessionStorage.getItem('commanddesk_auth') === 'true'
+  )
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -41,6 +45,10 @@ export default function App() {
       case 'staff-calls': return <StaffCalls />
       default: return <Dashboard />
     }
+  }
+
+  if (!isAuthenticated) {
+    return <PinAuth onSuccess={() => setIsAuthenticated(true)} />
   }
 
   return (
