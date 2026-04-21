@@ -112,6 +112,8 @@ export default function Sidebar() {
     return due >= now && due <= week
   }).length
 
+  const todayCount = tasks.filter(t => t.today && t.status !== 'done').length
+
   const adhocCount = tasks.filter(t => t.category === 'adhoc' && t.status !== 'done').length
 
   const hasBlockedTask = (projectId: number) =>
@@ -161,6 +163,13 @@ export default function Sidebar() {
             <p className="px-3 py-1.5 text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--text-3)' }}>Overview</p>
             <NavItem label="Dashboard" active={view === 'dashboard'} onClick={() => setView('dashboard')} icon="▣" />
             <NavItem label="All Tasks" active={view === 'all-tasks'} onClick={() => setView('all-tasks')} icon="⊞" />
+            <NavItem
+              label="Things to do Today"
+              active={view === 'today'}
+              onClick={() => setView('today')}
+              icon="☀"
+              badge={todayCount}
+            />
             <NavItem
               label="Due This Week"
               active={view === 'due-this-week'}

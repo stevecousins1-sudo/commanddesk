@@ -44,6 +44,13 @@ export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDel
     onTaskDeleted?.()
   }
 
+  const handleToggleToday = async (taskId: number) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+    await tasksApi.setToday(taskId, !task.today)
+    qc.invalidateQueries({ queryKey: ['tasks'] })
+  }
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   )
@@ -93,6 +100,7 @@ export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDel
               onDeleteTask={handleDeleteTask}
               onEditTask={(id) => setEditingTask(tasks.find(t => t.id === id) ?? null)}
               onCardClick={(id) => setDetailTask(tasks.find(t => t.id === id) ?? null)}
+              onToggleToday={handleToggleToday}
             />
           ))}
         </div>

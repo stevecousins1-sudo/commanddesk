@@ -16,9 +16,10 @@ interface Props {
   onDelete?: () => void
   onEdit?: () => void
   onCardClick?: () => void
+  onToggleToday?: () => void
 }
 
-export default function KanbanCard({ task, isDragging, onDelete, onEdit, onCardClick }: Props) {
+export default function KanbanCard({ task, isDragging, onDelete, onEdit, onCardClick, onToggleToday }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging: dragging } = useDraggable({
     id: task.id,
   })
@@ -52,6 +53,20 @@ export default function KanbanCard({ task, isDragging, onDelete, onEdit, onCardC
         </span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="w-2 h-2 rounded-full" style={{ background: PRIORITY_DOT[task.priority] || 'var(--blue)' }} />
+          {onToggleToday && (
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onToggleToday() }}
+              title={task.today ? 'Remove from Today' : 'Add to Today'}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: task.today ? 'var(--amber)' : 'var(--text-3)',
+                fontSize: 11, lineHeight: 1, padding: '1px 3px', borderRadius: 3,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--amber)')}
+              onMouseLeave={e => (e.currentTarget.style.color = task.today ? 'var(--amber)' : 'var(--text-3)')}
+            >☀</button>
+          )}
           {onEdit && (
             <button
               onPointerDown={e => e.stopPropagation()}

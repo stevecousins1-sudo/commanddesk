@@ -39,6 +39,7 @@ export async function runMigrations(): Promise<void> {
 
     await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS assignee TEXT`)
     await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS status_updates JSONB DEFAULT '[]'`)
+    await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS today BOOLEAN DEFAULT FALSE`)
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS employees (

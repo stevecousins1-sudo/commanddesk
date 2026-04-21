@@ -28,6 +28,7 @@ export interface Task {
   assigned_from?: string
   report_to?: string
   assignee?: string
+  today?: boolean
   due_date?: string
   completed_at?: string
   notes: Note[]
@@ -85,6 +86,7 @@ export type View =
   | 'dashboard'
   | 'all-tasks'
   | 'due-this-week'
+  | 'today'
   | 'project'
   | 'adhoc-tasks'
   | 'employee'

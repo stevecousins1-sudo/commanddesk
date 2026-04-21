@@ -10,6 +10,7 @@ import ProjectDetail from './pages/ProjectDetail'
 import AdHocTasks from './pages/AdHocTasks'
 import EmployeeDetail from './pages/EmployeeDetail'
 import StaffCalls from './pages/StaffCalls'
+import TodayTasks from './pages/TodayTasks'
 import PinAuth from './components/PinAuth'
 
 export default function App() {
@@ -38,6 +39,7 @@ export default function App() {
     switch (view) {
       case 'dashboard': return <Dashboard />
       case 'all-tasks': return <AllTasks />
+      case 'today': return <TodayTasks />
       case 'due-this-week': return <DueThisWeek />
       case 'project': return <ProjectDetail />
       case 'adhoc-tasks': return <AdHocTasks />

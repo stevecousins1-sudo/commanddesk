@@ -47,6 +47,8 @@ export default function Dashboard() {
 
   const pendingAgenda = employees.filter(e => e.agenda_items.some(a => !a.done))
 
+  const todayTasks = tasks.filter(t => t.today && t.status !== 'done')
+
   return (
     <div className="space-y-6 max-w-5xl">
       <div>
@@ -72,6 +74,60 @@ export default function Dashboard() {
         <StatCard label="Projects" value={projects.length} color="var(--cyan)" />
         <StatCard label="Team Members" value={employees.length} color="var(--blue-bright)" />
         <StatCard label="Overdue Tasks" value={overdue.length} color="var(--red)" onClick={() => setView('due-this-week')} />
+      </div>
+
+      {/* Things to do Today */}
+      <div className="rounded-xl p-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-syne font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--text-1)' }}>
+            <span style={{ color: 'var(--amber)' }}>☀</span> Things to do Today
+            {todayTasks.length > 0 && (
+              <span
+                className="font-mono text-xs px-1.5 py-0.5 rounded"
+                style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--amber)', border: '1px solid rgba(245,158,11,0.3)', fontSize: 10 }}
+              >
+                {todayTasks.length}
+              </span>
+            )}
+          </h2>
+          <button
+            onClick={() => setView('today')}
+            className="text-xs"
+            style={{ color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            View all →
+          </button>
+        </div>
+        {todayTasks.length === 0 ? (
+          <p className="text-sm" style={{ color: 'var(--text-3)' }}>
+            No tasks for today — use ☀ on any card to add one
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {todayTasks.slice(0, 8).map(t => (
+              <div key={t.id} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{ background: t.priority === 'Critical' ? 'var(--red)' : t.priority === 'High' ? 'var(--amber)' : t.priority === 'Medium' ? 'var(--blue)' : 'var(--green)' }}
+                  />
+                  <span className="text-sm truncate" style={{ color: 'var(--text-1)' }}>{t.title}</span>
+                </div>
+                <span
+                  className="font-mono text-xs flex-shrink-0"
+                  style={{ color: t.status === 'inprogress' ? 'var(--blue)' : t.status === 'review' ? 'var(--amber)' : 'var(--text-3)', fontSize: 10 }}
+                >
+                  {t.status === 'inprogress' ? 'In Progress' : t.status === 'review' ? 'Review' : 'To Do'}
+                </span>
+              </div>
+            ))}
+            {todayTasks.length > 8 && (
+              <button className="text-xs" style={{ color: 'var(--blue)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setView('today')}>
+                +{todayTasks.length - 8} more
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

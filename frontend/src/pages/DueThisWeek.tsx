@@ -31,6 +31,11 @@ export default function DueThisWeek() {
     qc.invalidateQueries({ queryKey: ['tasks'] })
   }
 
+  const handleToggleToday = async (task: Task) => {
+    await tasksApi.setToday(task.id, !task.today)
+    qc.invalidateQueries({ queryKey: ['tasks'] })
+  }
+
   const TaskRow = ({ task, isOv, onEdit }: { task: Task; isOv?: boolean; onEdit: () => void }) => (
     <div
       className="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer"
@@ -38,7 +43,7 @@ export default function DueThisWeek() {
       onClick={() => setDetailTask(task)}
     >
       <button
-        onClick={() => handleComplete(task)}
+        onClick={e => { e.stopPropagation(); handleComplete(task) }}
         className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center border transition-colors"
         style={{ borderColor: 'var(--border-light)' }}
         title="Mark complete"
@@ -48,12 +53,19 @@ export default function DueThisWeek() {
         <span style={{ fontSize: 10, color: 'var(--text-3)' }}>✓</span>
       </button>
       <button
-        onClick={onEdit}
+        onClick={e => { e.stopPropagation(); onEdit() }}
         title="Edit task"
         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: '0 4px' }}
         onMouseEnter={e => (e.currentTarget.style.color = 'var(--blue-bright)')}
         onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
       >✎</button>
+      <button
+        onClick={e => { e.stopPropagation(); handleToggleToday(task) }}
+        title={task.today ? 'Remove from Today' : 'Add to Today'}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: task.today ? 'var(--amber)' : 'var(--text-3)', fontSize: 14, padding: '0 2px' }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--amber)')}
+        onMouseLeave={e => (e.currentTarget.style.color = task.today ? 'var(--amber)' : 'var(--text-3)')}
+      >☀</button>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>{task.title}</div>
         {task.project_name && (

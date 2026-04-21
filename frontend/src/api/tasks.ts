@@ -15,4 +15,5 @@ export const tasksApi = {
     api.post<Task>(`/tasks/${id}/notes`, { text, by }),
   delete: (id: number) => api.delete<void>(`/tasks/${id}`),
   addStatusUpdate: (id: number, text: string) => api.post<Task>(`/tasks/${id}/status-updates`, { text }),
+  setToday: (id: number, today: boolean) => api.patch<Task>(`/tasks/${id}/today`, { today }),
 }
