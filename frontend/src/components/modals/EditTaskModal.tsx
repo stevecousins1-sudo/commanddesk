@@ -69,6 +69,10 @@ export default function EditTaskModal({ task, onClose, onSaved }: Props) {
         priority: formData.priority as any,
         status: formData.status as any,
         category: task.category as any,
+        project_id: task.project_id,
+        project_name: task.project_name,
+        assigned_from: task.assigned_from,
+        report_to: task.report_to,
       })
       onSaved()
     } catch (err: any) {
