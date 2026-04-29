@@ -287,32 +287,39 @@ export default function TodayTasks() {
                   </div>
 
                   {/* Notes in this group */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {group.notes.map(note => (
                       <div
                         key={note.id}
-                        style={{
-                          background: 'var(--bg-elevated)',
-                          border: '1px solid var(--border)',
-                          borderRadius: 8,
-                          padding: '10px 12px',
-                        }}
+                        style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}
                       >
-                        {group.isToday && (
-                          <p style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: 'var(--text-3)', margin: '0 0 5px 0' }}>
-                            {formatTime(note.created_at)}
+                        {/* Bullet */}
+                        <span style={{
+                          marginTop: 6,
+                          width: 6,
+                          height: 6,
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          background: group.isToday ? 'var(--amber)' : 'var(--text-3)',
+                        }} />
+                        {/* Content */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{
+                            fontSize: 13,
+                            color: 'var(--text-1)',
+                            lineHeight: 1.6,
+                            margin: 0,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}>
+                            {note.text}
                           </p>
-                        )}
-                        <p style={{
-                          fontSize: 13,
-                          color: 'var(--text-1)',
-                          lineHeight: 1.6,
-                          margin: 0,
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        }}>
-                          {note.text}
-                        </p>
+                          {group.isToday && (
+                            <p style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: 'var(--text-3)', margin: '2px 0 0 0' }}>
+                              {formatTime(note.created_at)}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
