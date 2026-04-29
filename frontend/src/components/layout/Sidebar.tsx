@@ -189,7 +189,7 @@ export default function Sidebar() {
               onAdd={() => setShowNewProject(true)}
             />
             {projectsOpen && (
-              <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
+              <div>
                 {projects.map(p => (
                   <NavItem
                     key={p.id}
@@ -236,7 +236,7 @@ export default function Sidebar() {
               onAdd={() => setShowAddEmployee(true)}
             />
             {peopleOpen && (
-              <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
+              <div>
                 {employees.map(e => (
                   <NavItem
                     key={e.id}
