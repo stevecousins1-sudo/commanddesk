@@ -125,7 +125,7 @@ export default function Sidebar() {
     tasks.filter(t => t.project_id === projectId && t.status !== 'done').length
 
   const sortedProjects = [...projects].sort(
-    (a, b) => incompleteCount(a.id) - incompleteCount(b.id)
+    (a, b) => incompleteCount(b.id) - incompleteCount(a.id)
   )
 
   const hasBlockedTask = (projectId: number) =>
