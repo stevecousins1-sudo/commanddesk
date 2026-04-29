@@ -7,12 +7,20 @@ import PriorityBadge from '../components/common/PriorityBadge'
 import KanbanBoard from '../components/kanban/KanbanBoard'
 import AddTaskModal from '../components/modals/AddTaskModal'
 
+function formatTimestamp(ts: string) {
+  return new Date(ts).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
+
 export default function ProjectDetail() {
   const { selectedProjectId, setView } = useAppStore()
   const qc = useQueryClient()
   const [showAddTask, setShowAddTask] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [addingNote, setAddingNote] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', client: '', description: '', due_date: '', priority: 'Medium', color: '#60a5fa' })
   const [saving, setSaving] = useState(false)
@@ -84,13 +92,14 @@ export default function ProjectDetail() {
     color: 'var(--text-1)', fontFamily: 'DM Sans, sans-serif', outline: 'none', width: '100%',
   }
 
+  const noteCount = project.notes.length
+
   return (
     <div className="flex flex-col h-full min-h-0 gap-5">
       {/* Header */}
       <div className="flex-shrink-0">
         {editing ? (
           <div className="rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            {/* Row: Name + Color */}
             <div className="flex gap-2 mb-3">
               <input
                 style={{ ...editInputStyle, flex: 1 }}
@@ -106,7 +115,6 @@ export default function ProjectDetail() {
                 title="Project color"
               />
             </div>
-            {/* Row: Client + Priority */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
               <input
                 style={editInputStyle}
@@ -125,7 +133,6 @@ export default function ProjectDetail() {
                 <option value="Critical">Critical</option>
               </select>
             </div>
-            {/* Due Date */}
             <div className="mb-3">
               <input
                 type="date"
@@ -134,7 +141,6 @@ export default function ProjectDetail() {
                 onChange={e => setEditForm(f => ({ ...f, due_date: e.target.value }))}
               />
             </div>
-            {/* Description */}
             <div className="mb-4">
               <textarea
                 style={{ ...editInputStyle, resize: 'vertical', minHeight: 72 }}
@@ -144,7 +150,6 @@ export default function ProjectDetail() {
                 rows={3}
               />
             </div>
-            {/* Buttons */}
             <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setEditing(false)}
@@ -182,6 +187,35 @@ export default function ProjectDetail() {
                     Due {new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </span>
                 )}
+                {/* Notes button */}
+                <button
+                  onClick={() => setNotesOpen(o => !o)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium"
+                  style={{
+                    background: notesOpen ? 'var(--bg-elevated)' : 'var(--bg-card)',
+                    color: notesOpen ? 'var(--text-1)' : 'var(--text-2)',
+                    border: `1px solid ${notesOpen ? 'var(--border-light)' : 'var(--border)'}`,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>📝</span>
+                  Notes
+                  {noteCount > 0 && (
+                    <span
+                      style={{
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-3)',
+                        borderRadius: 10,
+                        fontSize: 10,
+                        fontFamily: 'DM Mono, monospace',
+                        padding: '1px 6px',
+                      }}
+                    >
+                      {noteCount}
+                    </span>
+                  )}
+                </button>
                 <button
                   onClick={startEdit}
                   className="px-3 py-1.5 rounded-lg text-sm font-medium"
@@ -233,40 +267,171 @@ export default function ProjectDetail() {
         />
       </div>
 
-      {/* Notes */}
-      <div className="flex-shrink-0 rounded-xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <h3 className="font-syne font-semibold text-sm mb-3" style={{ color: 'var(--text-1)' }}>Project Notes</h3>
-        <div className="flex gap-2 mb-3">
-          <input
-            className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
-            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-1)', fontFamily: 'DM Sans, sans-serif' }}
-            placeholder="Add a note..."
-            value={noteText}
-            onChange={e => setNoteText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleAddNote() }}
+      {/* Notes slide-in panel */}
+      <>
+        {/* Backdrop */}
+        {notesOpen && (
+          <div
+            onClick={() => setNotesOpen(false)}
+            style={{
+              position: 'fixed', inset: 0,
+              zIndex: 39,
+              background: 'rgba(0,0,0,0.25)',
+            }}
           />
-          <button
-            onClick={handleAddNote}
-            disabled={addingNote || !noteText.trim()}
-            className="px-3 py-2 rounded-lg text-sm font-medium"
-            style={{ background: 'var(--blue)', color: '#fff', opacity: addingNote || !noteText.trim() ? 0.5 : 1 }}
-          >
-            Add
-          </button>
-        </div>
-        {project.notes.length > 0 && (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {[...project.notes].reverse().map((note, i) => (
-              <div key={i} className="text-sm px-3 py-2 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                <p style={{ color: 'var(--text-1)' }}>{note.text}</p>
-                <p className="font-mono text-xs mt-1" style={{ color: 'var(--text-3)' }}>
-                  {new Date(note.timestamp).toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </div>
         )}
-      </div>
+
+        {/* Panel */}
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: 400,
+            zIndex: 40,
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'var(--bg-surface)',
+            borderLeft: '1px solid var(--border)',
+            boxShadow: notesOpen ? '-12px 0 48px rgba(0,0,0,0.3)' : 'none',
+            transform: notesOpen ? 'translateX(0)' : 'translateX(100%)',
+            transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+          }}
+        >
+          {/* Panel header */}
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '18px 20px',
+              borderBottom: '1px solid var(--border)',
+              flexShrink: 0,
+            }}
+          >
+            <div>
+              <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--text-1)', margin: 0 }}>
+                Project Notes
+              </h3>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '3px 0 0 0', fontFamily: 'DM Mono, monospace' }}>
+                {project.name} · {noteCount} note{noteCount !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <button
+              onClick={() => setNotesOpen(false)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-3)', fontSize: 18, lineHeight: 1,
+                width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: 8,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--bg-elevated)'
+                e.currentTarget.style.color = 'var(--text-1)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'none'
+                e.currentTarget.style.color = 'var(--text-3)'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Add note */}
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+            <textarea
+              rows={3}
+              placeholder="Write a note…"
+              value={noteText}
+              onChange={e => setNoteText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleAddNote()
+              }}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 8,
+                fontSize: 14,
+                fontFamily: 'DM Sans, sans-serif',
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-1)',
+                outline: 'none',
+                resize: 'vertical',
+                marginBottom: 10,
+                boxSizing: 'border-box',
+              }}
+            />
+            <button
+              onClick={handleAddNote}
+              disabled={addingNote || !noteText.trim()}
+              style={{
+                width: '100%',
+                padding: '9px 16px',
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                fontFamily: 'DM Sans, sans-serif',
+                background: 'var(--blue)',
+                color: '#fff',
+                border: 'none',
+                cursor: addingNote || !noteText.trim() ? 'not-allowed' : 'pointer',
+                opacity: addingNote || !noteText.trim() ? 0.5 : 1,
+                transition: 'opacity 0.15s',
+              }}
+            >
+              {addingNote ? 'Adding…' : 'Add Note'}
+            </button>
+            <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6, textAlign: 'right', fontFamily: 'DM Mono, monospace' }}>
+              ⌘ + Enter to save
+            </p>
+          </div>
+
+          {/* Notes list */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+            {noteCount === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-3)' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>📝</div>
+                <p style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500, margin: '0 0 4px 0' }}>No notes yet</p>
+                <p style={{ fontSize: 12, margin: 0 }}>Write the first note above</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[...project.notes].reverse().map((note, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                    }}
+                  >
+                    <p style={{
+                      fontSize: 14,
+                      color: 'var(--text-1)',
+                      lineHeight: 1.6,
+                      margin: '0 0 8px 0',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}>
+                      {note.text}
+                    </p>
+                    <p style={{
+                      fontSize: 11,
+                      fontFamily: 'DM Mono, monospace',
+                      color: 'var(--text-3)',
+                      margin: 0,
+                    }}>
+                      {formatTimestamp(note.timestamp)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </>
 
       {showAddTask && (
         <AddTaskModal
