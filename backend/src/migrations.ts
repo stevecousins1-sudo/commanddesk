@@ -42,6 +42,14 @@ export async function runMigrations(): Promise<void> {
     await client.query(`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS today BOOLEAN DEFAULT FALSE`)
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS daily_notes (
+        id SERIAL PRIMARY KEY,
+        text TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `)
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS employees (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,

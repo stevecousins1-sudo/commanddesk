@@ -16,6 +16,12 @@ export interface StatusUpdate {
   timestamp: string
 }
 
+export interface DailyNote {
+  id: number
+  text: string
+  created_at: string
+}
+
 export interface Task {
   id: number
   title: string
