@@ -314,11 +314,6 @@ export default function TodayTasks() {
                           }}>
                             {note.text}
                           </p>
-                          {group.isToday && (
-                            <p style={{ fontSize: 10, fontFamily: 'DM Mono, monospace', color: 'var(--text-3)', margin: '2px 0 0 0' }}>
-                              {formatTime(note.created_at)}
-                            </p>
-                          )}
                         </div>
                       </div>
                     ))}
