@@ -51,6 +51,7 @@ const NavItem = ({
   icon,
   indent,
   color,
+  suffix,
 }: {
   label: string
   active: boolean
@@ -60,6 +61,7 @@ const NavItem = ({
   icon?: string
   indent?: boolean
   color?: string
+  suffix?: string
 }) => (
   <button
     onClick={onClick}
@@ -77,6 +79,9 @@ const NavItem = ({
     )}
     {!color && icon && <span className="flex-shrink-0" style={{ fontSize: 13 }}>{icon}</span>}
     <span className="flex-1 truncate text-sm">{label}</span>
+    {suffix && (
+      <span className="flex-shrink-0 font-mono" style={{ fontSize: 10, color: 'var(--text-3)' }}>{suffix}</span>
+    )}
     {dot && (
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--amber)' }} />
     )}
@@ -115,6 +120,13 @@ export default function Sidebar() {
   const todayCount = tasks.filter(t => t.today && t.status !== 'done').length
 
   const adhocCount = tasks.filter(t => t.category === 'adhoc' && t.status !== 'done').length
+
+  const incompleteCount = (projectId: number) =>
+    tasks.filter(t => t.project_id === projectId && t.status !== 'done').length
+
+  const sortedProjects = [...projects].sort(
+    (a, b) => incompleteCount(a.id) - incompleteCount(b.id)
+  )
 
   const hasBlockedTask = (projectId: number) =>
     tasks.some(t => t.project_id === projectId && t.status === 'review')
@@ -190,7 +202,7 @@ export default function Sidebar() {
             />
             {projectsOpen && (
               <div>
-                {projects.map(p => (
+                {sortedProjects.map(p => (
                   <NavItem
                     key={p.id}
                     label={p.name}
@@ -199,6 +211,7 @@ export default function Sidebar() {
                     dot={hasBlockedTask(p.id)}
                     color={p.color}
                     indent
+                    suffix={`(${incompleteCount(p.id)})`}
                   />
                 ))}
                 {projects.length === 0 && (
