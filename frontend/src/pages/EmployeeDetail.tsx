@@ -3,8 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../store/useAppStore'
 import { employeesApi } from '../api/employees'
 import { tasksApi } from '../api/tasks'
-import { AgendaItem } from '../types'
+import { AgendaItem, Task } from '../types'
 import PriorityBadge from '../components/common/PriorityBadge'
+import EditTaskModal from '../components/modals/EditTaskModal'
 
 export default function EmployeeDetail() {
   const { selectedEmployeeId, setView } = useAppStore()
@@ -17,6 +18,7 @@ export default function EmployeeDetail() {
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState({ name: '', role: '', initials: '', color: '#60a5fa' })
   const [saving, setSaving] = useState(false)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
 
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: employeesApi.getAll })
   const { data: allTasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => tasksApi.getAll() })
@@ -100,6 +102,25 @@ export default function EmployeeDetail() {
       setSavingMeeting(false)
     }
   }
+
+  const handleCompleteTask = async (taskId: number) => {
+    await tasksApi.complete(taskId)
+    qc.invalidateQueries({ queryKey: ['tasks'] })
+  }
+
+  const STATUS_LABEL: Record<string, string> = { todo: 'To Do', inprogress: 'In Progress', review: 'Review' }
+  const STATUS_COLOR: Record<string, string> = { todo: 'var(--text-3)', inprogress: 'var(--blue)', review: 'var(--amber)' }
+
+  const assignedTasks = allTasks.filter(t => t.assignee === employee.name && t.status !== 'done')
+
+  const fourteenDaysAgo = new Date()
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+  const recentlyCompleted = allTasks.filter(t =>
+    t.assignee === employee.name &&
+    t.status === 'done' &&
+    t.completed_at &&
+    new Date(t.completed_at) >= fourteenDaysAgo
+  ).sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())
 
   const cardStyle = { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12 }
   const editInputStyle = {
@@ -321,60 +342,120 @@ export default function EmployeeDetail() {
       </div>
 
       {/* Assigned Tasks */}
-      {(() => {
-        const assignedTasks = allTasks.filter(t => t.assignee === employee.name && t.status !== 'done')
-        const STATUS_LABEL: Record<string, string> = { todo: 'To Do', inprogress: 'In Progress', review: 'Review' }
-        const STATUS_COLOR: Record<string, string> = { todo: 'var(--text-3)', inprogress: 'var(--blue)', review: 'var(--amber)' }
-        return (
-          <div style={cardStyle} className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-syne font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Assigned Tasks</h2>
-              {assignedTasks.length > 0 && (
-                <span className="font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(74,144,217,0.12)', color: 'var(--blue)', border: '1px solid rgba(74,144,217,0.25)', fontSize: 10 }}>
-                  {assignedTasks.length} open
-                </span>
-              )}
-            </div>
-            {assignedTasks.length === 0 ? (
-              <p className="text-sm" style={{ color: 'var(--text-3)' }}>No open tasks assigned to {employee.name}</p>
-            ) : (
-              <div className="space-y-2">
-                {assignedTasks.map(task => {
-                  const isOverdue = task.due_date && new Date(task.due_date) < new Date()
-                  return (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-                      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+      <div style={cardStyle} className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-syne font-semibold text-sm" style={{ color: 'var(--text-1)' }}>Assigned Tasks</h2>
+          {assignedTasks.length > 0 && (
+            <span className="font-mono text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(74,144,217,0.12)', color: 'var(--blue)', border: '1px solid rgba(74,144,217,0.25)', fontSize: 10 }}>
+              {assignedTasks.length} open
+            </span>
+          )}
+        </div>
+
+        {/* Open tasks */}
+        {assignedTasks.length === 0 ? (
+          <p className="text-sm" style={{ color: 'var(--text-3)' }}>No open tasks assigned to {employee.name}</p>
+        ) : (
+          <div className="space-y-2">
+            {assignedTasks.map(task => {
+              const isOverdue = task.due_date && new Date(task.due_date) < new Date()
+              return (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                >
+                  {/* Complete */}
+                  <button
+                    onClick={() => handleCompleteTask(task.id)}
+                    className="w-5 h-5 rounded flex-shrink-0 border flex items-center justify-center transition-colors"
+                    style={{ borderColor: 'var(--border-light)' }}
+                    title="Mark complete"
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--green)')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-light)')}
+                  >
+                    <span style={{ fontSize: 10, color: 'var(--text-3)' }}>✓</span>
+                  </button>
+
+                  {/* Title + project */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>{task.title}</p>
+                    {task.project_name && (
+                      <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{task.project_name}</p>
+                    )}
+                  </div>
+
+                  {/* Badges */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <PriorityBadge priority={task.priority as any} />
+                    <span
+                      className="font-mono text-xs px-1.5 py-0.5 rounded"
+                      style={{ fontSize: 10, color: STATUS_COLOR[task.status] || 'var(--text-3)', background: 'transparent', border: `1px solid ${STATUS_COLOR[task.status] || 'var(--border)'}` }}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>{task.title}</p>
-                        {task.project_name && (
-                          <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{task.project_name}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <PriorityBadge priority={task.priority as any} />
-                        <span
-                          className="font-mono text-xs px-1.5 py-0.5 rounded"
-                          style={{ fontSize: 10, color: STATUS_COLOR[task.status] || 'var(--text-3)', background: 'transparent', border: `1px solid ${STATUS_COLOR[task.status] || 'var(--border)'}` }}
-                        >
-                          {STATUS_LABEL[task.status] || task.status}
-                        </span>
-                        {task.due_date && (
-                          <span className="font-mono text-xs" style={{ color: isOverdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}>
-                            {isOverdue ? '⚠ ' : ''}{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                      {STATUS_LABEL[task.status] || task.status}
+                    </span>
+                    {task.due_date && (
+                      <span className="font-mono text-xs" style={{ color: isOverdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}>
+                        {isOverdue ? '⚠ ' : ''}{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Edit */}
+                  <button
+                    onClick={() => setEditingTask(task)}
+                    title="Edit task"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: '0 2px', flexShrink: 0 }}
+                    onMouseEnter={e => (e.currentTarget.style.color = 'var(--blue-bright)')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                  >✎</button>
+                </div>
+              )
+            })}
           </div>
-        )
-      })()}
+        )}
+
+        {/* Completed in last 14 days */}
+        {recentlyCompleted.length > 0 && (
+          <div className="mt-5">
+            <p className="text-xs font-mono uppercase tracking-widest mb-3" style={{ color: 'var(--text-3)' }}>
+              Completed · last 14 days
+            </p>
+            <div className="space-y-2">
+              {recentlyCompleted.map(task => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', opacity: 0.7 }}
+                >
+                  <span
+                    className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center"
+                    style={{ background: 'rgba(52,211,153,0.15)', border: '1px solid var(--green)' }}
+                  >
+                    <span style={{ fontSize: 10, color: 'var(--green)' }}>✓</span>
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm truncate line-through" style={{ color: 'var(--text-2)' }}>{task.title}</p>
+                    {task.project_name && (
+                      <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>{task.project_name}</p>
+                    )}
+                  </div>
+                  <span className="font-mono text-xs flex-shrink-0" style={{ color: 'var(--text-3)', fontSize: 10 }}>
+                    {new Date(task.completed_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      {editingTask && (
+        <EditTaskModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+          onSaved={() => { qc.invalidateQueries({ queryKey: ['tasks'] }); setEditingTask(null) }}
+        />
+      )}
     </div>
   )
 }
