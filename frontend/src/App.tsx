@@ -11,6 +11,7 @@ import AdHocTasks from './pages/AdHocTasks'
 import EmployeeDetail from './pages/EmployeeDetail'
 import StaffCalls from './pages/StaffCalls'
 import TodayTasks from './pages/TodayTasks'
+import ToWatch from './pages/ToWatch'
 import PinAuth from './components/PinAuth'
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
       case 'dashboard': return <Dashboard />
       case 'all-tasks': return <AllTasks />
       case 'today': return <TodayTasks />
+      case 'to-watch': return <ToWatch />
       case 'due-this-week': return <DueThisWeek />
       case 'project': return <ProjectDetail />
       case 'adhoc-tasks': return <AdHocTasks />

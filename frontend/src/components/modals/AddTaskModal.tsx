@@ -29,7 +29,7 @@ export default function AddTaskModal({ onClose, onCreated, defaultCategory = 'pr
     assigned_from: '',
     report_to: '',
     due_date: '',
-    assignee: '',
+    assignee: 'Me',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

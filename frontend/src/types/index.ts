@@ -35,6 +35,7 @@ export interface Task {
   report_to?: string
   assignee?: string
   today?: boolean
+  video_link?: string
   due_date?: string
   completed_at?: string
   notes: Note[]
@@ -93,6 +94,7 @@ export type View =
   | 'all-tasks'
   | 'due-this-week'
   | 'today'
+  | 'to-watch'
   | 'project'
   | 'adhoc-tasks'
   | 'employee'

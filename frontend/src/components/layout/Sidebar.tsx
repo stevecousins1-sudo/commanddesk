@@ -118,6 +118,7 @@ export default function Sidebar() {
   }).length
 
   const todayCount = tasks.filter(t => t.today && t.status !== 'done').length
+  const watchCount = tasks.filter(t => t.video_link && t.status !== 'done').length
 
   const adhocCount = tasks.filter(t => t.category === 'adhoc' && t.status !== 'done').length
 
@@ -188,6 +189,13 @@ export default function Sidebar() {
               onClick={() => setView('due-this-week')}
               icon="◷"
               badge={dueThisWeekCount}
+            />
+            <NavItem
+              label="To Watch"
+              active={view === 'to-watch'}
+              onClick={() => setView('to-watch')}
+              icon="▶"
+              badge={watchCount}
             />
           </div>
 
