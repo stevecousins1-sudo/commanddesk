@@ -101,7 +101,7 @@ export default function AddTaskModal({ onClose, onCreated, defaultCategory = 'pr
           </div>
           <div>
             <label style={labelStyle}>Due Date</label>
-            <input type="date" style={{ ...inputStyle, colorScheme: 'dark' }} value={form.due_date} onChange={e => setF('due_date', e.target.value)} />
+            <input type="date" style={inputStyle} value={form.due_date} onChange={e => setF('due_date', e.target.value)} />
           </div>
         </div>
         <div>

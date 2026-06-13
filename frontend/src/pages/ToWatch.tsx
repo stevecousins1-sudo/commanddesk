@@ -93,7 +93,7 @@ function AddWatchModal({ onClose, onCreated }: { onClose: () => void; onCreated:
             <label style={labelStyle}>Watch By</label>
             <input
               type="date"
-              style={{ ...inputStyle, colorScheme: 'dark' }}
+              style={inputStyle}
               value={form.due_date}
               onChange={e => setF('due_date', e.target.value)}
             />
