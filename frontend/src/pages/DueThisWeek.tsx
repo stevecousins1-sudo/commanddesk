@@ -15,13 +15,18 @@ export default function DueThisWeek() {
   const now = new Date()
   const week = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
+  const todayTasks = tasks.filter(t => t.today && t.status !== 'done')
+  const todayIds = new Set(todayTasks.map(t => t.id))
+
   const dueThisWeek = tasks.filter(t => {
+    if (todayIds.has(t.id)) return false
     if (!t.due_date || t.status === 'done') return false
     const d = new Date(t.due_date)
     return d >= now && d <= week
   })
 
   const overdue = tasks.filter(t => {
+    if (todayIds.has(t.id)) return false
     if (!t.due_date || t.status === 'done') return false
     return new Date(t.due_date) < now
   })
@@ -93,8 +98,15 @@ export default function DueThisWeek() {
     <div className="max-w-3xl space-y-6">
       <div>
         <h1 className="font-syne font-bold text-2xl" style={{ color: 'var(--text-1)' }}>Due This Week</h1>
-        <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>{dueThisWeek.length + overdue.length} tasks need attention</p>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>{todayTasks.length + dueThisWeek.length + overdue.length} tasks need attention</p>
       </div>
+
+      {todayTasks.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--amber)' }}>Today — {todayTasks.length}</h2>
+          {todayTasks.map(t => <TaskRow key={t.id} task={t} onEdit={() => setEditingTask(t)} />)}
+        </div>
+      )}
 
       {overdue.length > 0 && (
         <div className="space-y-2">
@@ -110,7 +122,7 @@ export default function DueThisWeek() {
         </div>
       )}
 
-      {dueThisWeek.length === 0 && overdue.length === 0 && (
+      {todayTasks.length === 0 && dueThisWeek.length === 0 && overdue.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20" style={{ color: 'var(--text-3)' }}>
           <div className="text-4xl mb-3">✓</div>
           <p className="text-sm">All caught up! Nothing due this week.</p>
