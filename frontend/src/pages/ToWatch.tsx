@@ -4,6 +4,7 @@ import { tasksApi } from '../api/tasks'
 import { projectsApi } from '../api/projects'
 import { Task } from '../types'
 import Modal from '../components/common/Modal'
+import { isSafeHttpUrl, safeHref } from '../utils/url'
 
 function AddWatchModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsApi.getAll })
@@ -29,6 +30,7 @@ function AddWatchModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     e.preventDefault()
     if (!form.title.trim()) { setError('Video name is required'); return }
     if (!form.video_link.trim()) { setError('Video link is required'); return }
+    if (!isSafeHttpUrl(form.video_link)) { setError('Video link must be a valid http:// or https:// URL'); return }
     setLoading(true)
     try {
       await tasksApi.create({
@@ -189,6 +191,7 @@ export default function ToWatch() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {watchItems.map(task => {
             const overdue = task.due_date && isOverdue(task.due_date)
+            const href = safeHref(task.video_link)
             return (
               <div
                 key={task.id}
@@ -273,31 +276,52 @@ export default function ToWatch() {
                     </p>
                   )}
 
-                  {/* Link */}
-                  <a
-                    href={task.video_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '5px 12px',
-                      borderRadius: 7,
-                      fontSize: 13,
-                      fontWeight: 500,
-                      fontFamily: 'DM Sans, sans-serif',
-                      background: 'var(--bg-elevated)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--blue)',
-                      textDecoration: 'none',
-                      transition: 'border-color 0.15s',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--blue)')}
-                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-                  >
-                    <span style={{ fontSize: 12 }}>▶</span> Watch Recording
-                  </a>
+                  {/* Link — only rendered clickable for safe http(s) URLs */}
+                  {href ? (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '5px 12px',
+                        borderRadius: 7,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        fontFamily: 'DM Sans, sans-serif',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--blue)',
+                        textDecoration: 'none',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--blue)')}
+                      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                    >
+                      <span style={{ fontSize: 12 }}>▶</span> Watch Recording
+                    </a>
+                  ) : (
+                    <span
+                      title="This link is not a valid http(s) URL and has been blocked"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '5px 12px',
+                        borderRadius: 7,
+                        fontSize: 13,
+                        fontWeight: 500,
+                        fontFamily: 'DM Sans, sans-serif',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-3)',
+                      }}
+                    >
+                      <span style={{ fontSize: 12 }}>⚠</span> Unsafe link blocked
+                    </span>
+                  )}
                 </div>
               </div>
             )

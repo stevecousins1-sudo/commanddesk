@@ -7,7 +7,19 @@ import { runMigrations } from './migrations'
 const app = express()
 const PORT = parseInt(process.env.PORT || '3000')
 
-app.use(cors())
+// The React app is served by this same server (and proxied via Vite in dev),
+// so the API is always same-origin and needs no cross-origin access by default.
+// Set CORS_ORIGIN (comma-separated) only if a separate front-end origin must reach the API.
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean)
+
+app.use(
+  cors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+  })
+)
 app.use(express.json())
 
 // API routes
