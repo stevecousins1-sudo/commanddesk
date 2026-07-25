@@ -74,6 +74,7 @@ export interface AgendaItem {
   text: string
   done: boolean
   date_added: string
+  date_completed?: string
   notes: Note[]
 }
 

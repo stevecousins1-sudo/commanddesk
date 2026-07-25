@@ -33,12 +33,25 @@ export default function EmployeeDetail() {
   }
 
   const pendingItems = employee.agenda_items.filter(a => !a.done)
-  const doneItems = employee.agenda_items.filter(a => a.done)
+  const allDoneItems = employee.agenda_items.filter(a => a.done)
+
+  // Completed items age out after 30 days. Legacy items have no completion date,
+  // so they can't be aged out — cap those at the 10 most recent instead.
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+  const undatedToKeep = new Set(allDoneItems.filter(a => !a.date_completed).slice(-10))
+  const doneItems = allDoneItems.filter(a =>
+    a.date_completed
+      ? Date.now() - new Date(a.date_completed).getTime() <= THIRTY_DAYS_MS
+      : undatedToKeep.has(a)
+  )
+  const hiddenDoneCount = allDoneItems.length - doneItems.length
 
   const toggleAgendaItem = async (idx: number) => {
-    const updated = employee.agenda_items.map((item, i) =>
-      i === idx ? { ...item, done: !item.done } : item
-    )
+    const updated = employee.agenda_items.map((item, i) => {
+      if (i !== idx) return item
+      const done = !item.done
+      return { ...item, done, date_completed: done ? new Date().toISOString() : undefined }
+    })
     await employeesApi.updateAgendaItems(employee.id, updated)
     qc.invalidateQueries({ queryKey: ['employees'] })
   }
@@ -248,7 +261,7 @@ export default function EmployeeDetail() {
           </div>
 
           <div className="space-y-2">
-            {employee.agenda_items.length === 0 && (
+            {pendingItems.length === 0 && doneItems.length === 0 && hiddenDoneCount === 0 && (
               <p className="text-sm" style={{ color: 'var(--text-3)' }}>No agenda items yet</p>
             )}
             {pendingItems.length > 0 && pendingItems.map((item) => {
@@ -271,7 +284,7 @@ export default function EmployeeDetail() {
                 </div>
               )
             })}
-            {doneItems.length > 0 && (
+            {(doneItems.length > 0 || hiddenDoneCount > 0) && (
               <>
                 <p className="text-xs font-mono pt-2" style={{ color: 'var(--text-3)' }}>Completed</p>
                 {doneItems.map((item) => {
@@ -289,6 +302,11 @@ export default function EmployeeDetail() {
                     </div>
                   )
                 })}
+                {hiddenDoneCount > 0 && (
+                  <p className="text-xs font-mono pt-1" style={{ color: 'var(--text-3)', opacity: 0.7 }}>
+                    {hiddenDoneCount} older completed item{hiddenDoneCount === 1 ? '' : 's'} hidden
+                  </p>
+                )}
               </>
             )}
           </div>
