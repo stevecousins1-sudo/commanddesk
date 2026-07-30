@@ -1,4 +1,5 @@
 import { useRef, useState, KeyboardEvent, ClipboardEvent } from 'react'
+import BuildStamp from './common/BuildStamp'
 
 const CORRECT_PIN = '7535'
 const PIN_LENGTH = 4
@@ -169,6 +170,10 @@ export default function PinAuth({ onSuccess }: Props) {
         }}>
           Incorrect PIN. Please try again.
         </p>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <BuildStamp centered />
       </div>
 
       <style>{`

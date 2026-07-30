@@ -2,6 +2,7 @@ import { useAppStore } from '../../store/useAppStore'
 import { useQuery } from '@tanstack/react-query'
 import { projectsApi } from '../../api/projects'
 import { employeesApi } from '../../api/employees'
+import BuildStamp from '../common/BuildStamp'
 
 const VIEW_LABELS: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -59,6 +60,7 @@ export default function Topbar() {
           </span>
         ))}
       </div>
+      <BuildStamp />
     </div>
   )
 }
