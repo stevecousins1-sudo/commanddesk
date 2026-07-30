@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore, reportError } from '../store/useAppStore'
+import { formatMediumDate } from '../utils/date'
 import { projectsApi } from '../api/projects'
 import { tasksApi } from '../api/tasks'
 import PriorityBadge from '../components/common/PriorityBadge'
@@ -49,18 +50,30 @@ export default function ProjectDetail() {
     try {
       await projectsApi.update(project.id, { ...editForm, priority: editForm.priority as any })
       qc.invalidateQueries({ queryKey: ['projects'] })
+      // A rename cascades to tasks.project_name server-side, so refresh tasks too.
+      qc.invalidateQueries({ queryKey: ['tasks'] })
       setEditing(false)
+    } catch (err) {
+      reportError(err, 'Failed to save project')
     } finally {
       setSaving(false)
     }
   }
 
   const handleDelete = async () => {
-    if (!project || !confirm(`Delete project "${project.name}"? This cannot be undone.`)) return
-    await projectsApi.delete(project.id)
-    qc.invalidateQueries({ queryKey: ['projects'] })
-    qc.invalidateQueries({ queryKey: ['tasks'] })
-    setView('dashboard')
+    if (!project) return
+    const confirmed = confirm(
+      `Delete project "${project.name}"?\n\nIts tasks will be kept and moved to Ad-hoc Tasks. This cannot be undone.`
+    )
+    if (!confirmed) return
+    try {
+      await projectsApi.delete(project.id)
+      qc.invalidateQueries({ queryKey: ['projects'] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      setView('dashboard')
+    } catch (err) {
+      reportError(err, 'Failed to delete project')
+    }
   }
 
   const handleAddNote = async () => {
@@ -70,6 +83,8 @@ export default function ProjectDetail() {
       await projectsApi.addNote(project.id, noteText.trim())
       qc.invalidateQueries({ queryKey: ['projects'] })
       setNoteText('')
+    } catch (err) {
+      reportError(err, 'Failed to add note')
     } finally {
       setAddingNote(false)
     }
@@ -184,7 +199,7 @@ export default function ProjectDetail() {
                 <PriorityBadge priority={project.priority as any} size="md" />
                 {project.due_date && (
                   <span className="font-mono text-xs px-2 py-1 rounded" style={{ background: 'var(--bg-card)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>
-                    Due {new Date(project.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    Due {formatMediumDate(project.due_date)}
                   </span>
                 )}
                 {/* Notes button */}

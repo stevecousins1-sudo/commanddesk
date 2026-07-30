@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAppStore } from '../store/useAppStore'
+import { useAppStore, reportError } from '../store/useAppStore'
+import { formatLongDate, formatShortDate, formatWeekdayDate, isOverdue } from '../utils/date'
 import { employeesApi } from '../api/employees'
 import { tasksApi } from '../api/tasks'
 import { AgendaItem, Task } from '../types'
@@ -52,8 +53,12 @@ export default function EmployeeDetail() {
       const done = !item.done
       return { ...item, done, date_completed: done ? new Date().toISOString() : undefined }
     })
-    await employeesApi.updateAgendaItems(employee.id, updated)
-    qc.invalidateQueries({ queryKey: ['employees'] })
+    try {
+      await employeesApi.updateAgendaItems(employee.id, updated)
+      qc.invalidateQueries({ queryKey: ['employees'] })
+    } catch (err) {
+      reportError(err, 'Failed to update agenda item')
+    }
   }
 
   const addAgendaItem = async () => {
@@ -64,15 +69,23 @@ export default function EmployeeDetail() {
       date_added: new Date().toISOString(),
       notes: [],
     }
-    await employeesApi.updateAgendaItems(employee.id, [...employee.agenda_items, newItem])
-    qc.invalidateQueries({ queryKey: ['employees'] })
-    setNewAgendaText('')
+    try {
+      await employeesApi.updateAgendaItems(employee.id, [...employee.agenda_items, newItem])
+      qc.invalidateQueries({ queryKey: ['employees'] })
+      setNewAgendaText('')
+    } catch (err) {
+      reportError(err, 'Failed to add agenda item')
+    }
   }
 
   const deleteAgendaItem = async (idx: number) => {
     const updated = employee.agenda_items.filter((_, i) => i !== idx)
-    await employeesApi.updateAgendaItems(employee.id, updated)
-    qc.invalidateQueries({ queryKey: ['employees'] })
+    try {
+      await employeesApi.updateAgendaItems(employee.id, updated)
+      qc.invalidateQueries({ queryKey: ['employees'] })
+    } catch (err) {
+      reportError(err, 'Failed to delete agenda item')
+    }
   }
 
   const startEdit = () => {
@@ -86,7 +99,11 @@ export default function EmployeeDetail() {
     try {
       await employeesApi.update(employee.id, editForm)
       qc.invalidateQueries({ queryKey: ['employees'] })
+      // A rename cascades to tasks.assignee server-side, so refresh tasks too.
+      qc.invalidateQueries({ queryKey: ['tasks'] })
       setEditing(false)
+    } catch (err) {
+      reportError(err, 'Failed to save team member')
     } finally {
       setSaving(false)
     }
@@ -94,9 +111,13 @@ export default function EmployeeDetail() {
 
   const handleDelete = async () => {
     if (!employee || !confirm(`Remove "${employee.name}" from the team? This cannot be undone.`)) return
-    await employeesApi.delete(employee.id)
-    qc.invalidateQueries({ queryKey: ['employees'] })
-    setView('dashboard')
+    try {
+      await employeesApi.delete(employee.id)
+      qc.invalidateQueries({ queryKey: ['employees'] })
+      setView('dashboard')
+    } catch (err) {
+      reportError(err, 'Failed to remove team member')
+    }
   }
 
   const saveMeetingNotes = async () => {
@@ -111,14 +132,20 @@ export default function EmployeeDetail() {
       setMeetingDate('')
       setMeetingSummary('')
       setShowMeetingForm(false)
+    } catch (err) {
+      reportError(err, 'Failed to save meeting notes')
     } finally {
       setSavingMeeting(false)
     }
   }
 
   const handleCompleteTask = async (taskId: number) => {
-    await tasksApi.complete(taskId)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    try {
+      await tasksApi.complete(taskId)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      reportError(err, 'Failed to complete task')
+    }
   }
 
   const STATUS_LABEL: Record<string, string> = { todo: 'To Do', inprogress: 'In Progress', review: 'Review' }
@@ -162,7 +189,7 @@ export default function EmployeeDetail() {
           <p className="text-sm" style={{ color: 'var(--text-2)' }}>{employee.role}</p>
           {employee.last_meeting && (
             <p className="text-xs font-mono mt-0.5" style={{ color: 'var(--text-3)' }}>
-              Last 1:1: {new Date(employee.last_meeting).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              Last 1:1: {formatLongDate(employee.last_meeting)}
             </p>
           )}
         </div>
@@ -350,7 +377,7 @@ export default function EmployeeDetail() {
             ) : employee.meeting_notes.map((note, i) => (
               <div key={i} className="p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
                 <p className="font-mono text-xs mb-1" style={{ color: 'var(--blue-bright)' }}>
-                  {new Date(note.date).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
+                  {formatWeekdayDate(note.date)}
                 </p>
                 {note.summary && <p className="text-sm" style={{ color: 'var(--text-1)' }}>{note.summary}</p>}
               </div>
@@ -376,7 +403,7 @@ export default function EmployeeDetail() {
         ) : (
           <div className="space-y-2">
             {assignedTasks.map(task => {
-              const isOverdue = task.due_date && new Date(task.due_date) < new Date()
+              const overdue = isOverdue(task.due_date)
               return (
                 <div
                   key={task.id}
@@ -413,8 +440,8 @@ export default function EmployeeDetail() {
                       {STATUS_LABEL[task.status] || task.status}
                     </span>
                     {task.due_date && (
-                      <span className="font-mono text-xs" style={{ color: isOverdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}>
-                        {isOverdue ? '⚠ ' : ''}{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      <span className="font-mono text-xs" style={{ color: overdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}>
+                        {overdue ? '⚠ ' : ''}{formatShortDate(task.due_date)}
                       </span>
                     )}
                   </div>

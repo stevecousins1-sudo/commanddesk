@@ -5,6 +5,8 @@ import PriorityBadge from '../components/common/PriorityBadge'
 import EditTaskModal from '../components/modals/EditTaskModal'
 import TaskDetailModal from '../components/modals/TaskDetailModal'
 import { Task } from '../types'
+import { reportError } from '../store/useAppStore'
+import { formatShortDate, isDueWithin, isOverdue } from '../utils/date'
 
 export default function DueThisWeek() {
   const qc = useQueryClient()
@@ -12,33 +14,36 @@ export default function DueThisWeek() {
   const [detailTask, setDetailTask] = useState<Task | null>(null)
   const { data: tasks = [], isLoading } = useQuery({ queryKey: ['tasks'], queryFn: () => tasksApi.getAll() })
 
-  const now = new Date()
-  const week = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-
   const todayTasks = tasks.filter(t => t.today && t.status !== 'done')
   const todayIds = new Set(todayTasks.map(t => t.id))
 
+  // A task due today belongs in "due this week", not "overdue".
   const dueThisWeek = tasks.filter(t => {
-    if (todayIds.has(t.id)) return false
-    if (!t.due_date || t.status === 'done') return false
-    const d = new Date(t.due_date)
-    return d >= now && d <= week
+    if (todayIds.has(t.id) || t.status === 'done') return false
+    return isDueWithin(t.due_date, 7)
   })
 
   const overdue = tasks.filter(t => {
-    if (todayIds.has(t.id)) return false
-    if (!t.due_date || t.status === 'done') return false
-    return new Date(t.due_date) < now
+    if (todayIds.has(t.id) || t.status === 'done') return false
+    return isOverdue(t.due_date)
   })
 
   const handleComplete = async (task: Task) => {
-    await tasksApi.complete(task.id)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    try {
+      await tasksApi.complete(task.id)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      reportError(err, 'Failed to complete task')
+    }
   }
 
   const handleToggleToday = async (task: Task) => {
-    await tasksApi.setToday(task.id, !task.today)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    try {
+      await tasksApi.setToday(task.id, !task.today)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      reportError(err, 'Failed to update Today flag')
+    }
   }
 
   const TaskRow = ({ task, isOv, onEdit }: { task: Task; isOv?: boolean; onEdit: () => void }) => (
@@ -83,12 +88,14 @@ export default function DueThisWeek() {
           {task.assignee}
         </span>
       )}
-      <span
-        className="font-mono text-xs flex-shrink-0"
-        style={{ color: isOv ? 'var(--red)' : 'var(--text-2)' }}
-      >
-        {isOv ? '⚠ ' : ''}{new Date(task.due_date!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-      </span>
+      {task.due_date && (
+        <span
+          className="font-mono text-xs flex-shrink-0"
+          style={{ color: isOv ? 'var(--red)' : 'var(--text-2)' }}
+        >
+          {isOv ? '⚠ ' : ''}{formatShortDate(task.due_date)}
+        </span>
+      )}
     </div>
   )
 

@@ -3,6 +3,7 @@ import { useAppStore } from './store/useAppStore'
 import Sidebar from './components/layout/Sidebar'
 import Topbar from './components/layout/Topbar'
 import SearchOverlay from './components/common/SearchOverlay'
+import ErrorToast from './components/common/ErrorToast'
 import Dashboard from './pages/Dashboard'
 import AllTasks from './pages/AllTasks'
 import DueThisWeek from './pages/DueThisWeek'
@@ -65,6 +66,7 @@ export default function App() {
         </main>
       </div>
       {searchOpen && <SearchOverlay onClose={() => setSearchOpen(false)} />}
+      <ErrorToast />
     </div>
   )
 }

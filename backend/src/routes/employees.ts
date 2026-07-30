@@ -26,18 +26,35 @@ employeesRouter.post('/', async (req: Request, res: Response) => {
   }
 })
 
+// Tasks record their assignee by name, so a rename has to be pushed out to them
+// or every task assigned to this person is orphaned.
 employeesRouter.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params
   const { name, role, initials, color, last_meeting } = req.body
+  const dbClient = await pool.connect()
   try {
-    const result = await pool.query(
+    await dbClient.query('BEGIN')
+    const existing = await dbClient.query('SELECT name FROM employees WHERE id=$1 FOR UPDATE', [id])
+    if (existing.rows.length === 0) {
+      await dbClient.query('ROLLBACK')
+      return res.status(404).json({ error: 'Not found' })
+    }
+    const previousName: string = existing.rows[0].name
+    const result = await dbClient.query(
       `UPDATE employees SET name=$1, role=$2, initials=$3, color=$4, last_meeting=$5 WHERE id=$6 RETURNING *`,
-      [name, role, initials, color, last_meeting, id]
+      [name, role, initials, color, last_meeting || null, id]
     )
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' })
+    const newName: string = result.rows[0].name
+    if (previousName !== newName) {
+      await dbClient.query('UPDATE tasks SET assignee=$1 WHERE assignee=$2', [newName, previousName])
+    }
+    await dbClient.query('COMMIT')
     res.json(result.rows[0])
   } catch (err) {
+    await dbClient.query('ROLLBACK').catch(() => {})
     res.status(500).json({ error: 'Failed to update employee' })
+  } finally {
+    dbClient.release()
   }
 })
 

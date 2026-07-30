@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { staffCallsApi } from '../api/staffCalls'
-import { StaffCall, SimpleAgendaItem } from '../types'
+import { StaffCall } from '../types'
 import Modal from '../components/common/Modal'
+import { reportError } from '../store/useAppStore'
+import { formatMediumDate } from '../utils/date'
 
-function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => void }) {
+function StaffCallCard({ call }: { call: StaffCall }) {
   const qc = useQueryClient()
   const [newItem, setNewItem] = useState('')
   const [editing, setEditing] = useState(false)
@@ -17,6 +19,8 @@ function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => vo
       await staffCallsApi.update(call.id, editForm)
       qc.invalidateQueries({ queryKey: ['staff-calls'] })
       setEditing(false)
+    } catch (err) {
+      reportError(err, 'Failed to save staff call')
     } finally {
       setSaving(false)
     }
@@ -30,22 +34,34 @@ function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => vo
 
   const handleDelete = async () => {
     if (!confirm(`Delete "${call.name}"? This cannot be undone.`)) return
-    await staffCallsApi.delete(call.id)
-    qc.invalidateQueries({ queryKey: ['staff-calls'] })
+    try {
+      await staffCallsApi.delete(call.id)
+      qc.invalidateQueries({ queryKey: ['staff-calls'] })
+    } catch (err) {
+      reportError(err, 'Failed to delete staff call')
+    }
   }
 
   const toggleItem = async (idx: number) => {
     const updated = call.agenda_items.map((a, i) => i === idx ? { ...a, done: !a.done } : a)
-    await staffCallsApi.updateAgendaItems(call.id, updated)
-    qc.invalidateQueries({ queryKey: ['staff-calls'] })
+    try {
+      await staffCallsApi.updateAgendaItems(call.id, updated)
+      qc.invalidateQueries({ queryKey: ['staff-calls'] })
+    } catch (err) {
+      reportError(err, 'Failed to update agenda item')
+    }
   }
 
   const addItem = async () => {
     if (!newItem.trim()) return
     const updated = [...call.agenda_items, { text: newItem.trim(), done: false }]
-    await staffCallsApi.updateAgendaItems(call.id, updated)
-    qc.invalidateQueries({ queryKey: ['staff-calls'] })
-    setNewItem('')
+    try {
+      await staffCallsApi.updateAgendaItems(call.id, updated)
+      qc.invalidateQueries({ queryKey: ['staff-calls'] })
+      setNewItem('')
+    } catch (err) {
+      reportError(err, 'Failed to add agenda item')
+    }
   }
 
   const pending = call.agenda_items.filter(a => !a.done).length
@@ -60,7 +76,7 @@ function StaffCallCard({ call, onUpdate }: { call: StaffCall; onUpdate: () => vo
               {call.schedule && <p className="text-xs mt-0.5" style={{ color: 'var(--text-2)' }}>{call.schedule}</p>}
               {call.next_date && (
                 <p className="font-mono text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-                  Next: {new Date(call.next_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  Next: {formatMediumDate(call.next_date)}
                 </p>
               )}
             </>
@@ -182,6 +198,8 @@ function NewStaffCallModal({ onClose, onCreated }: { onClose: () => void; onCrea
     try {
       await staffCallsApi.create(form)
       onCreated()
+    } catch (err) {
+      reportError(err, 'Failed to create staff call')
     } finally {
       setLoading(false)
     }
@@ -227,15 +245,13 @@ export default function StaffCalls() {
           <h1 className="font-syne font-bold text-2xl" style={{ color: 'var(--text-1)' }}>Staff Calls</h1>
           <p className="text-sm mt-0.5" style={{ color: 'var(--text-2)' }}>{calls.length} recurring calls</p>
         </div>
-        {calls.length === 0 && (
-          <button
-            onClick={() => setShowNew(true)}
-            className="px-4 py-2 rounded-lg text-sm font-medium"
-            style={{ background: 'var(--blue)', color: '#fff' }}
-          >
-            + New Call
-          </button>
-        )}
+        <button
+          onClick={() => setShowNew(true)}
+          className="px-4 py-2 rounded-lg text-sm font-medium"
+          style={{ background: 'var(--blue)', color: '#fff' }}
+        >
+          + New Call
+        </button>
       </div>
 
       {calls.length === 0 ? (
@@ -246,7 +262,7 @@ export default function StaffCalls() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {calls.map(call => (
-            <StaffCallCard key={call.id} call={call} onUpdate={() => qc.invalidateQueries({ queryKey: ['staff-calls'] })} />
+            <StaffCallCard key={call.id} call={call} />
           ))}
         </div>
       )}

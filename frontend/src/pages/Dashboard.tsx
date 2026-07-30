@@ -3,6 +3,7 @@ import { tasksApi } from '../api/tasks'
 import { projectsApi } from '../api/projects'
 import { employeesApi } from '../api/employees'
 import { useAppStore } from '../store/useAppStore'
+import { formatShortDate, isDueWithin, isOverdue } from '../utils/date'
 
 const StatCard = ({ label, value, color, onClick }: { label: string; value: number; color: string; onClick?: () => void }) => (
   <div
@@ -32,18 +33,8 @@ export default function Dashboard() {
   const review = tasks.filter(t => t.status === 'review').length
   const done = tasks.filter(t => t.status === 'done').length
 
-  const now = new Date()
-  const week = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-  const dueThisWeek = tasks.filter(t => {
-    if (!t.due_date || t.status === 'done') return false
-    const d = new Date(t.due_date)
-    return d >= now && d <= week
-  })
-
-  const overdue = tasks.filter(t => {
-    if (!t.due_date || t.status === 'done') return false
-    return new Date(t.due_date) < now
-  })
+  const dueThisWeek = tasks.filter(t => t.status !== 'done' && isDueWithin(t.due_date, 7))
+  const overdue = tasks.filter(t => t.status !== 'done' && isOverdue(t.due_date))
 
   const pendingAgenda = employees.filter(e => e.agenda_items.some(a => !a.done))
 
@@ -142,7 +133,7 @@ export default function Dashboard() {
                 <div key={t.id} className="flex items-center justify-between gap-2">
                   <span className="text-sm truncate" style={{ color: 'var(--text-1)' }}>{t.title}</span>
                   <span className="font-mono text-xs flex-shrink-0" style={{ color: 'var(--text-3)' }}>
-                    {new Date(t.due_date!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {formatShortDate(t.due_date!)}
                   </span>
                 </div>
               ))}

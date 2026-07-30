@@ -12,6 +12,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { Task, TaskStatus } from '../../types'
 import { tasksApi } from '../../api/tasks'
+import { reportError } from '../../store/useAppStore'
 import KanbanColumn from './KanbanColumn'
 import KanbanCard from './KanbanCard'
 import EditTaskModal from '../modals/EditTaskModal'
@@ -39,16 +40,24 @@ export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDel
 
   const handleDeleteTask = async (taskId: number) => {
     if (!confirm('Delete this task? This cannot be undone.')) return
-    await tasksApi.delete(taskId)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
-    onTaskDeleted?.()
+    try {
+      await tasksApi.delete(taskId)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      onTaskDeleted?.()
+    } catch (err) {
+      reportError(err, 'Failed to delete task')
+    }
   }
 
   const handleToggleToday = async (taskId: number) => {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
-    await tasksApi.setToday(taskId, !task.today)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    try {
+      await tasksApi.setToday(taskId, !task.today)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      reportError(err, 'Failed to update Today flag')
+    }
   }
 
   const sensors = useSensors(
@@ -77,7 +86,7 @@ export default function KanbanBoard({ tasks, onTaskUpdated, onAddTask, onTaskDel
       qc.invalidateQueries({ queryKey: ['tasks'] })
       onTaskUpdated?.()
     } catch (err) {
-      console.error('Failed to update task status', err)
+      reportError(err, 'Failed to move task')
     }
   }
 

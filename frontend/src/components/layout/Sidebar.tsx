@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore'
 import { projectsApi } from '../../api/projects'
 import { employeesApi } from '../../api/employees'
 import { tasksApi } from '../../api/tasks'
+import { isDueWithin } from '../../utils/date'
 import NewProjectModal from '../modals/NewProjectModal'
 import AddEmployeeModal from '../modals/AddEmployeeModal'
 
@@ -109,13 +110,9 @@ export default function Sidebar() {
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: employeesApi.getAll })
   const { data: tasks = [] } = useQuery({ queryKey: ['tasks'], queryFn: () => tasksApi.getAll() })
 
-  const dueThisWeekCount = tasks.filter(t => {
-    if (!t.due_date || t.status === 'done') return false
-    const due = new Date(t.due_date)
-    const now = new Date()
-    const week = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-    return due >= now && due <= week
-  }).length
+  const dueThisWeekCount = tasks.filter(
+    t => t.status !== 'done' && isDueWithin(t.due_date, 7)
+  ).length
 
   const todayCount = tasks.filter(t => t.today && t.status !== 'done').length
   const watchCount = tasks.filter(t => t.video_link && t.status !== 'done').length

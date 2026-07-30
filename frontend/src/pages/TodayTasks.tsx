@@ -6,6 +6,8 @@ import PriorityBadge from '../components/common/PriorityBadge'
 import EditTaskModal from '../components/modals/EditTaskModal'
 import TaskDetailModal from '../components/modals/TaskDetailModal'
 import { Task, DailyNote } from '../types'
+import { reportError } from '../store/useAppStore'
+import { formatShortDate } from '../utils/date'
 
 const STATUS_LABEL: Record<string, string> = {
   todo: 'To Do',
@@ -67,13 +69,21 @@ export default function TodayTasks() {
   }, [dailyNotes.length])
 
   const handleComplete = async (task: Task) => {
-    await tasksApi.complete(task.id)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    try {
+      await tasksApi.complete(task.id)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      reportError(err, 'Failed to complete task')
+    }
   }
 
   const handleRemove = async (task: Task) => {
-    await tasksApi.setToday(task.id, false)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    try {
+      await tasksApi.setToday(task.id, false)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      reportError(err, 'Failed to remove task from Today')
+    }
   }
 
   const handleAddNote = async () => {
@@ -83,6 +93,8 @@ export default function TodayTasks() {
       await dailyNotesApi.add(noteText.trim())
       qc.invalidateQueries({ queryKey: ['daily-notes'] })
       setNoteText('')
+    } catch (err) {
+      reportError(err, 'Failed to add note')
     } finally {
       setAddingNote(false)
     }
@@ -134,7 +146,7 @@ export default function TodayTasks() {
       )}
       {task.due_date && (
         <span className="font-mono text-xs flex-shrink-0" style={{ color: 'var(--text-2)' }}>
-          {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {formatShortDate(task.due_date)}
         </span>
       )}
       <button

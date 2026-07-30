@@ -2,6 +2,7 @@ import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import { Task } from '../../types'
 import PriorityBadge from '../common/PriorityBadge'
+import { formatShortDate, isOverdue } from '../../utils/date'
 
 const PRIORITY_DOT: Record<string, string> = {
   Critical: 'var(--red)',
@@ -30,7 +31,7 @@ export default function KanbanCard({ task, isDragging, onDelete, onEdit, onCardC
     cursor: dragging ? 'grabbing' : 'grab',
   }
 
-  const isOverdue = task.due_date && task.status !== 'done' && new Date(task.due_date) < new Date()
+  const overdue = task.status !== 'done' && isOverdue(task.due_date)
 
   return (
     <div
@@ -102,9 +103,9 @@ export default function KanbanCard({ task, isDragging, onDelete, onEdit, onCardC
         {task.due_date && (
           <span
             className="font-mono text-xs"
-            style={{ color: isOverdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}
+            style={{ color: overdue ? 'var(--red)' : 'var(--text-3)', fontSize: 10 }}
           >
-            {isOverdue ? '⚠ ' : ''}{new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            {overdue ? '⚠ ' : ''}{formatShortDate(task.due_date)}
           </span>
         )}
         {task.assignee && (

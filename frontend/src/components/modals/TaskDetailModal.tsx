@@ -3,6 +3,8 @@ import { Task } from '../../types'
 import { tasksApi } from '../../api/tasks'
 import Modal from '../common/Modal'
 import PriorityBadge from '../common/PriorityBadge'
+import { reportError } from '../../store/useAppStore'
+import { formatMediumDate, isOverdue } from '../../utils/date'
 
 interface Props {
   task: Task
@@ -38,14 +40,6 @@ function formatTimestamp(timestamp: string): string {
   }).replace(',', ',').replace(' at ', ' at ')
 }
 
-function isOverdue(due_date: string): boolean {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const due = new Date(due_date)
-  due.setHours(0, 0, 0, 0)
-  return due < today
-}
-
 export default function TaskDetailModal({ task, onClose, onUpdated }: Props) {
   const [updateText, setUpdateText] = useState('')
   const [posting, setPosting] = useState(false)
@@ -58,6 +52,8 @@ export default function TaskDetailModal({ task, onClose, onUpdated }: Props) {
       setUpdateText('')
       onUpdated()
       onClose()
+    } catch (err) {
+      reportError(err, 'Failed to post status update')
     } finally {
       setPosting(false)
     }
@@ -106,7 +102,7 @@ export default function TaskDetailModal({ task, onClose, onUpdated }: Props) {
             borderRadius: 6,
             padding: '2px 8px',
           }}>
-            Due {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            Due {formatMediumDate(task.due_date)}
           </span>
         )}
 

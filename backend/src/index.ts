@@ -25,6 +25,12 @@ app.use(express.json())
 // API routes
 app.use('/api', router)
 
+// Unmatched API paths must 404 as JSON rather than falling through to the SPA
+// catch-all below, which would answer them with index.html and a 200.
+app.use('/api', (_req, res) => {
+  res.status(404).json({ error: 'Not found' })
+})
+
 // Serve compiled React app
 const publicPath = path.join(__dirname, '..', 'public')
 app.use(express.static(publicPath))

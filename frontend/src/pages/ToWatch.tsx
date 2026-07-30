@@ -5,6 +5,8 @@ import { projectsApi } from '../api/projects'
 import { Task } from '../types'
 import Modal from '../components/common/Modal'
 import { isSafeHttpUrl, safeHref } from '../utils/url'
+import { reportError } from '../store/useAppStore'
+import { formatShortDate, isOverdue } from '../utils/date'
 
 function AddWatchModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsApi.getAll })
@@ -134,12 +136,6 @@ function AddWatchModal({ onClose, onCreated }: { onClose: () => void; onCreated:
   )
 }
 
-function isOverdue(due_date: string) {
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const due = new Date(due_date); due.setHours(0, 0, 0, 0)
-  return due < today
-}
-
 export default function ToWatch() {
   const qc = useQueryClient()
   const [showAdd, setShowAdd] = useState(false)
@@ -149,8 +145,12 @@ export default function ToWatch() {
   const watchItems = tasks.filter(t => t.video_link && t.status !== 'done')
 
   const handleMarkWatched = async (task: Task) => {
-    await tasksApi.complete(task.id)
-    qc.invalidateQueries({ queryKey: ['tasks'] })
+    try {
+      await tasksApi.complete(task.id)
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+    } catch (err) {
+      reportError(err, 'Failed to mark recording as watched')
+    }
   }
 
   if (isLoading) return (
@@ -190,7 +190,7 @@ export default function ToWatch() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {watchItems.map(task => {
-            const overdue = task.due_date && isOverdue(task.due_date)
+            const overdue = isOverdue(task.due_date)
             const href = safeHref(task.video_link)
             return (
               <div
@@ -264,7 +264,7 @@ export default function ToWatch() {
                           color: overdue ? 'var(--red)' : 'var(--text-2)',
                           border: `1px solid ${overdue ? 'var(--red)' : 'var(--border)'}`,
                         }}>
-                          {overdue ? '⚠ ' : ''}Watch by {new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          {overdue ? '⚠ ' : ''}Watch by {formatShortDate(task.due_date)}
                         </span>
                       )}
                     </div>

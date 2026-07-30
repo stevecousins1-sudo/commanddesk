@@ -26,29 +26,58 @@ projectsRouter.post('/', async (req: Request, res: Response) => {
   }
 })
 
+// Tasks cache their project's name in tasks.project_name, so a rename has to be
+// pushed out to them or cards and search results keep showing the old name.
 projectsRouter.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params
   const { name, client, priority, color, description, due_date, members } = req.body
+  const dbClient = await pool.connect()
   try {
-    const result = await pool.query(
+    await dbClient.query('BEGIN')
+    const result = await dbClient.query(
       `UPDATE projects SET name=$1, client=$2, priority=$3, color=$4, description=$5,
        due_date=$6, members=$7 WHERE id=$8 RETURNING *`,
-      [name, client, priority, color, description, due_date, members, id]
+      [name, client, priority, color, description, due_date || null, members, id]
     )
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' })
+    if (result.rows.length === 0) {
+      await dbClient.query('ROLLBACK')
+      return res.status(404).json({ error: 'Not found' })
+    }
+    await dbClient.query('UPDATE tasks SET project_name=$1 WHERE project_id=$2', [
+      result.rows[0].name,
+      id,
+    ])
+    await dbClient.query('COMMIT')
     res.json(result.rows[0])
   } catch (err) {
+    await dbClient.query('ROLLBACK').catch(() => {})
     res.status(500).json({ error: 'Failed to update project' })
+  } finally {
+    dbClient.release()
   }
 })
 
+// The tasks FK is ON DELETE SET NULL, which would leave tasks pointing at no
+// project while still carrying its name and category 'proj' — invisible on every
+// project board but still badged. Convert them to ad-hoc tasks instead of
+// deleting them, so nothing is silently lost.
 projectsRouter.delete('/:id', async (req: Request, res: Response) => {
   const { id } = req.params
+  const dbClient = await pool.connect()
   try {
-    await pool.query('DELETE FROM projects WHERE id=$1', [id])
+    await dbClient.query('BEGIN')
+    await dbClient.query(
+      `UPDATE tasks SET project_name=NULL, category='adhoc' WHERE project_id=$1`,
+      [id]
+    )
+    await dbClient.query('DELETE FROM projects WHERE id=$1', [id])
+    await dbClient.query('COMMIT')
     res.status(204).send()
   } catch (err) {
+    await dbClient.query('ROLLBACK').catch(() => {})
     res.status(500).json({ error: 'Failed to delete project' })
+  } finally {
+    dbClient.release()
   }
 })
 

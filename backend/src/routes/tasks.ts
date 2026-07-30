@@ -3,6 +3,39 @@ import { pool } from '../db'
 
 export const tasksRouter = Router()
 
+// Columns a client may write through POST / PUT.
+const WRITABLE_COLUMNS = [
+  'title',
+  'description',
+  'priority',
+  'status',
+  'category',
+  'project_id',
+  'project_name',
+  'assigned_from',
+  'report_to',
+  'due_date',
+  'assignee',
+  'video_link',
+  'today',
+] as const
+
+// Nullable columns where an empty string from a cleared form field means "unset".
+const NULL_IF_EMPTY = new Set([
+  'project_id',
+  'project_name',
+  'assigned_from',
+  'report_to',
+  'due_date',
+  'assignee',
+  'video_link',
+])
+
+function normalize(column: string, value: unknown): unknown {
+  if (NULL_IF_EMPTY.has(column) && (value === '' || value === undefined)) return null
+  return value
+}
+
 tasksRouter.get('/', async (req: Request, res: Response) => {
   try {
     const conditions: string[] = []
@@ -39,7 +72,20 @@ tasksRouter.post('/', async (req: Request, res: Response) => {
     const result = await pool.query(
       `INSERT INTO tasks (title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date, assignee, video_link)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-      [title, description, priority || 'Medium', status || 'todo', category || 'proj', project_id || null, project_name, assigned_from, report_to, due_date, assignee, video_link || null]
+      [
+        title,
+        description,
+        priority || 'Medium',
+        status || 'todo',
+        category || 'proj',
+        normalize('project_id', project_id),
+        normalize('project_name', project_name),
+        normalize('assigned_from', assigned_from),
+        normalize('report_to', report_to),
+        normalize('due_date', due_date),
+        normalize('assignee', assignee),
+        normalize('video_link', video_link),
+      ]
     )
     res.status(201).json(result.rows[0])
   } catch (err) {
@@ -47,15 +93,30 @@ tasksRouter.post('/', async (req: Request, res: Response) => {
   }
 })
 
+// Updates only the columns present in the request body. Editing a task through a
+// form that omits a field (e.g. the edit modal has no video_link input) must not
+// blank that column out.
 tasksRouter.put('/:id', async (req: Request, res: Response) => {
   const { id } = req.params
-  const { title, description, priority, status, category, project_id, project_name, assigned_from, report_to, due_date, assignee, video_link } = req.body
+  const assignments: string[] = []
+  const values: unknown[] = []
+  let idx = 1
+
+  for (const column of WRITABLE_COLUMNS) {
+    if (!(column in req.body)) continue
+    assignments.push(`${column}=$${idx++}`)
+    values.push(normalize(column, req.body[column]))
+  }
+
+  if (assignments.length === 0) {
+    return res.status(400).json({ error: 'No fields to update' })
+  }
+
+  values.push(id)
   try {
     const result = await pool.query(
-      `UPDATE tasks SET title=$1, description=$2, priority=$3, status=$4, category=$5,
-       project_id=$6, project_name=$7, assigned_from=$8, report_to=$9, due_date=$10, assignee=$11, video_link=$12
-       WHERE id=$13 RETURNING *`,
-      [title, description, priority, status, category, project_id || null, project_name, assigned_from, report_to, due_date, assignee, video_link || null, id]
+      `UPDATE tasks SET ${assignments.join(', ')} WHERE id=$${idx} RETURNING *`,
+      values
     )
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' })
     res.json(result.rows[0])
